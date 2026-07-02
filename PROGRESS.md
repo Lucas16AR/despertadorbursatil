@@ -1,5 +1,9 @@
 # PROGRESS.md
 
+## Estado actual (2026-07-02)
+
+MVP operativo: el cron de GitHub Actions manda el reporte de dólar + MERVAL a Telegram todos los días a las 8am (Argentina). Corrida manual (`workflow_dispatch`) validada exitosa de punta a punta. Los 3 secrets (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BCRA_API_TOKEN`) ya están cargados en GitHub. Único pendiente operativo: confirmar que la corrida automática de mañana commitea sola el snapshot (ver "Pendiente" al final).
+
 ## 2026-07-01 — Primera tarea: script MVP (dólar + MERVAL → Telegram)
 
 ### Qué se hizo
@@ -37,9 +41,14 @@ Archivos nuevos:
 - Token de estadisticasbcra.com obtenido en `/api/registracion` (expira al año, límite de 100 consultas/día — el script hace 1 por día, sobra margen).
 - `python main.py` corrido localmente con las 3 credenciales reales: llegó el mensaje a Telegram con el formato esperado (destacado + dólar + MERVAL con variación), y `data/last_snapshot.json` quedó actualizado. Primer envío end-to-end validado.
 
+### Actualización 2026-07-02 — commit/push inicial y primera corrida en GitHub Actions
+
+- El repo estaba sin commitear/pushear hasta este punto (todo el trabajo anterior era solo local) — commiteado y pusheado a `origin/master`, incluyendo el snapshot de la corrida local de prueba.
+- Primer intento de `workflow_dispatch` falló: `403 Forbidden` en la llamada a estadisticasbcra.com/merval. Se agregó logging del cuerpo de la respuesta en `bcra.py` para diagnosticar (token mal cargado vs. bloqueo de IP de datacenter, ambos dan 403 en esta API).
+- Causa real: el secret `BCRA_API_TOKEN` en GitHub Actions se había cargado mal (error de tipeo al pegar el valor). Corregido en Settings → Secrets → Actions, no era un problema de código ni de bloqueo de IP.
+- Segunda corrida de `workflow_dispatch`: **exitosa**. El MVP completo (dólar + MERVAL → Telegram) corre end-to-end en GitHub Actions, no solo local. El cron diario de las 8am (Argentina) queda operativo.
+
 ### Pendiente
 
-- Cargar los 3 secrets (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BCRA_API_TOKEN`) en GitHub → Settings → Secrets and variables → Actions (no se pudo automatizar con `gh CLI` porque no está instalado en la máquina local — se hace manual por la web).
-- Correr el workflow una vez a mano (`workflow_dispatch`) para confirmar que también funciona en GitHub Actions, no solo local, antes de dejar el cron de las 8am corriendo solo.
-- Confirmar que el paso de commit-back del snapshot en el workflow funciona (permisos `contents: write` ya están seteados en el YAML, pero no probado en CI todavía).
+- Confirmar en la próxima corrida automática (mañana 8am) que el paso de commit-back del snapshot en el workflow efectivamente actualiza `data/last_snapshot.json` en el repo sin intervención manual.
 - Del doc del MVP, sigue sin resolver: punto legal de "recomendaciones" (no aplica a este script, pero bloquea sumar esa sección más adelante), trámite de acceso a la API de IOL, fuentes de noticias/macro para el resumen con IA, nombre comercial del Despertador.
