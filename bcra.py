@@ -16,6 +16,8 @@ def _headers() -> dict:
 def fetch_merval() -> dict | None:
     """Devuelve {"valor", "variacion_pct"} del último cierre de MERVAL, o None si no hay serie suficiente."""
     response = requests.get(f"{BCRA_BASE_URL}/merval", headers=_headers(), timeout=10)
+    if not response.ok:
+        print(f"estadisticasbcra.com respondió {response.status_code}: {response.text[:500]}")
     response.raise_for_status()
     serie = response.json()
     if len(serie) < 2:
