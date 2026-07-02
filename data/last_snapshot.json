@@ -1,0 +1,25 @@
+{
+  "dolares": {
+    "oficial": {
+      "nombre": "Oficial",
+      "compra": 1460,
+      "venta": 1510
+    },
+    "blue": {
+      "nombre": "Blue",
+      "compra": 1505,
+      "venta": 1525
+    },
+    "bolsa": {
+      "nombre": "MEP",
+      "compra": 1517.2,
+      "venta": 1521.2
+    },
+    "contadoconliqui": {
+      "nombre": "CCL",
+      "compra": 1568.8,
+      "venta": 1570.6
+    }
+  },
+  "brecha_mep_oficial": 0.7417218543046388
+}
