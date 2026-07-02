@@ -25,7 +25,12 @@ def calcular_brecha_mep_oficial(dolares: dict) -> float:
     return (mep - oficial) / oficial * 100
 
 
-def armar_mensaje(dolares: dict, merval: dict | None, snapshot_anterior: dict | None) -> str:
+def armar_mensaje(
+    dolares: dict,
+    merval: dict | None,
+    snapshot_anterior: dict | None,
+    resumen_macro: str | None = None,
+) -> str:
     hoy = snapshot_anterior or {}
     dolares_ayer = hoy.get("dolares", {})
     brecha_ayer = hoy.get("brecha_mep_oficial")
@@ -61,6 +66,13 @@ def armar_mensaje(dolares: dict, merval: dict | None, snapshot_anterior: dict | 
             "",
             "📊 <b>Índices</b>",
             f"MERVAL: {merval['valor']:.0f}{_flecha(merval['variacion_pct'])} ({merval['variacion_pct']:+.1f}%)",
+        ]
+
+    if resumen_macro:
+        lineas += [
+            "",
+            "📰 <b>Contexto macro</b>",
+            resumen_macro,
         ]
 
     lineas += [

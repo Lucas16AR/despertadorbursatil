@@ -1,8 +1,47 @@
 # PROGRESS.md
 
-## Estado actual (2026-07-02)
+## Estado actual (2026-07-02, fin del día)
 
-MVP operativo: el cron de GitHub Actions manda el reporte de dólar + MERVAL a Telegram todos los días a las 8am (Argentina). Corrida manual (`workflow_dispatch`) validada exitosa de punta a punta. Los 3 secrets (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BCRA_API_TOKEN`) ya están cargados en GitHub. Único pendiente operativo: confirmar que la corrida automática de mañana commitea sola el snapshot (ver "Pendiente" al final).
+MVP operativo: el cron de GitHub Actions manda el reporte de dólar + MERVAL + resumen macro con IA a Telegram todos los días a las 8am (Argentina). Los 4 secrets (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BCRA_API_TOKEN`, `ANTHROPIC_API_KEY`) ya están cargados en GitHub. Las dos tareas del roadmap de hoy (script base + resumen macro con IA) están hechas y validadas en local; falta solo ver la corrida automática de mañana para confirmar que también anda sola en Actions con las 4 credenciales — no requiere acción manual, se revisa mañana.
+
+**Modelo de IA usado:** `claude-haiku-4-5` (Claude Haiku) — es el modelo más barato del catálogo de Anthropic. Elegido a propósito, no por default: el resumen macro es una tarea simple (sintetizar titulares + datos ya calculados en 2-4 oraciones), no necesita el razonamiento de un modelo más caro, y el volumen es 1 llamada/día — el costo es prácticamente nulo.
+
+## 2026-07-02 — Segunda tarea: resumen macro con IA (Claude Haiku)
+
+### Qué se hizo
+
+Implementado el resumen macro definido en `mvp-despertador-bursatil.md` (sección "Resumen macro con IA"): titulares de RSS + datos duros ya calculados → síntesis de 2-4 oraciones con Claude API (Haiku), sin instrucciones de inversión.
+
+Archivos nuevos:
+- `rss_news.py` — `fetch_titulares()`: pega a los RSS de Ámbito Financiero, Infobae Economía y El Cronista (feeds `arc/outboundfeeds` para Infobae/Cronista, `rss/pages` para Ámbito — URLs exactas confirmadas con `curl`, no solo las páginas genéricas de canales que daba el doc), filtra por `published_parsed` a las últimas 24hs.
+- `macro_summary.py` — `generar_resumen_macro()`: arma el prompt (brecha + dólares + MERVAL + titulares) y llama a Claude API con `model="claude-haiku-4-5"` — modelo fijado explícitamente por instrucción del propio proyecto (`CLAUDE.md` dice "Claude API (Haiku)"), no el default de Opus. Devuelve `None` si la llamada falla, para no bloquear el resto del reporte.
+
+Archivos modificados:
+- `formatter.py` — `armar_mensaje()` ahora acepta `resumen_macro: str | None` opcional y agrega una sección "📰 Contexto macro" solo si hay resumen.
+- `main.py` — orquesta el fetch de titulares + la llamada a Claude dentro de un `try/except` que no bloquea el envío del reporte si falla (mismo criterio "no bloqueante" que ya se usa para IOL en el doc del MVP).
+- `requirements.txt` — sumadas `feedparser==6.0.11` y `anthropic==0.115.1`.
+- `.env.example` y el workflow de GitHub Actions — sumada `ANTHROPIC_API_KEY`.
+
+### Decisiones técnicas
+
+- **No bloqueante por diseño.** Si el fetch de RSS o la llamada a Claude fallan (red caída, rate limit, feed roto), el script sigue y manda el reporte de dólar + MERVAL sin la sección de contexto macro, en vez de que falle todo el envío. Mismo criterio que "IOL opcional/pluggable" del doc del MVP.
+- **Modelo Haiku, no el default de Opus.** El proyecto define explícitamente Claude API (Haiku) como parte del stack en `CLAUDE.md` y `mvp-despertador-bursatil.md` — se respetó esa decisión ya tomada en vez de usar el modelo por default de las guías generales de la API.
+- **Prompt sin instrucciones de inversión**, coherente con la sección de riesgos del MVP (recomendaciones = zona gris regulatoria) — el system prompt lo prohíbe explícitamente.
+
+### Validado
+
+- `rss_news.fetch_titulares()` probado en vivo: trajo 89 titulares reales de los 3 feeds en la ventana de 24hs.
+- `formatter.armar_mensaje()` probado con y sin `resumen_macro` — la sección nueva aparece solo cuando corresponde y no rompe el formato existente.
+- `macro_summary._armar_prompt()` probado con datos de ejemplo — arma el texto esperado (brecha + dólares + MERVAL + titulares).
+- Compilación (`py_compile`) e import de todos los módulos nuevos/modificados sin errores.
+
+### Actualización 2026-07-02 — validación end-to-end con Claude API real
+
+- `ANTHROPIC_API_KEY` cargada en `.env` local.
+- `generar_resumen_macro()` probado en aislado con datos reales (85 titulares de los 3 feeds + dólar/MERVAL/brecha del día): devolvió una síntesis de 3 oraciones, coherente y sin instrucciones de inversión.
+- `python main.py` corrido completo: llegó el mensaje a Telegram con la sección "📰 Contexto macro" incluida, y `data/last_snapshot.json` quedó actualizado. Primer envío end-to-end con resumen macro validado localmente.
+
+`ANTHROPIC_API_KEY` ya cargada también como secret de GitHub Actions (2026-07-02) — con esto, el resumen macro con IA queda completo y operativo en los 3 entornos (local, Actions). Sin pendientes propios de esta tarea; queda solo confirmar en la corrida automática de mañana (o un `workflow_dispatch` manual) que también funciona en Actions, mismo criterio que se usó para validar el MVP original.
 
 ## 2026-07-01 — Primera tarea: script MVP (dólar + MERVAL → Telegram)
 
