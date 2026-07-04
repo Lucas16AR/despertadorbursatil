@@ -7,19 +7,19 @@
     },
     "blue": {
       "nombre": "Blue",
-      "compra": 1505,
-      "venta": 1525
+      "compra": 1490,
+      "venta": 1510
     },
     "bolsa": {
       "nombre": "MEP",
-      "compra": 1527,
-      "venta": 1532.4
+      "compra": 1522.9,
+      "venta": 1526
     },
     "contadoconliqui": {
       "nombre": "CCL",
-      "compra": 1573.9,
-      "venta": 1575.8
+      "compra": 1566.8,
+      "venta": 1568.8
     }
   },
-  "brecha_mep_oficial": 1.4834437086092775
+  "brecha_mep_oficial": 1.0596026490066226
 }
