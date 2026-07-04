@@ -6,6 +6,31 @@ MVP operativo: el cron de GitHub Actions manda el reporte de dólar + MERVAL + r
 
 **Modelo de IA usado:** `claude-haiku-4-5` (Claude Haiku) — es el modelo más barato del catálogo de Anthropic. Elegido a propósito, no por default: el resumen macro es una tarea simple (sintetizar titulares + datos ya calculados en 2-4 oraciones), no necesita el razonamiento de un modelo más caro, y el volumen es 1 llamada/día — el costo es prácticamente nulo.
 
+## 2026-07-04 — Tercera tarea: disclaimer legal + housekeeping git
+
+### Disclaimer legal (hecho)
+
+Agregado el texto de descargo exacto al final de cada mensaje en `formatter.py`
+(commit `42f243d`), por el riesgo regulatorio CNV y el riesgo de baneo en
+WhatsApp por contenido percibido como "señales de trading":
+
+> 🤖 Alerta automatizada con fines puramente informativos y educativos. No
+> constituye una recomendación de inversión, oferta de compra/venta ni
+> asesoramiento bursátil. Operar bajo su propio riesgo.
+
+Reemplaza la versión corta previa ("No es asesoramiento financiero"). Es un
+string estático dentro de `armar_mensaje()`, no puede fallar ni bloquear el
+envío. Validado localmente: el mensaje renderiza con el disclaimer al final,
+después de la línea de fuentes. **Tercera tarea del roadmap cerrada.**
+
+### Housekeeping git (hecho)
+
+`git pull` (fast-forward de 1 commit: snapshot actualizado por el cron) +
+commit/push de: `.gitignore` (ahora ignora `.claude/`), `CLAUDE.md`
+actualizado y `decisiones.md` nuevo (nombre de la división "Atuel Insights" +
+incorporación del Dashboard de inversiones). Commit `0de9a93`. `.claude/` ya no
+está trackeado.
+
 ## 2026-07-02 — Segunda tarea: resumen macro con IA (Claude Haiku)
 
 ### Qué se hizo
