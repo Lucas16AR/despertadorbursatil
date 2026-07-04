@@ -2,7 +2,7 @@
 
 *Definido: 2026-07-01 · Estado actualizado: 2026-07-02*
 
-*Última actualización (lado Cowork): 2026-07-02 18:00 ART, revisando `PROGRESS.md` traído del repo. Repo real del código en `D:\Programacion\despertadorbursatil\` — este archivo se sincroniza a mano, copiar y pegar cuando esta fecha sea más nueva que la del archivo allá.*
+*Última actualización: 2026-07-04. Desde el 2026-07-04 este archivo y el código viven juntos en la misma carpeta (`despertadorbursatil/`), leídos por Cowork y Claude Code — ya no hay sincronización manual desde `D:\Programacion\despertadorbursatil\` (esa carpeta separada quedó obsoleta con la mudanza).*
 
 ## Estado actual (2026-07-02)
 
