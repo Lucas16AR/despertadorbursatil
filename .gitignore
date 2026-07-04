@@ -108,6 +108,9 @@ ipython_config.py
 # poetry.lock
 # poetry.toml
 
+# Claude Code local settings (paths y permisos de esta máquina, no del proyecto)
+.claude/
+
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
 #   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
