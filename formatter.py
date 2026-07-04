@@ -77,7 +77,11 @@ def armar_mensaje(
 
     lineas += [
         "",
-        "<i>Fuente: dolarapi.com, estadisticasbcra.com. No es asesoramiento financiero.</i>",
+        "<i>Fuente: dolarapi.com, estadisticasbcra.com.</i>",
+        "",
+        "<i>🤖 Alerta automatizada con fines puramente informativos y educativos. "
+        "No constituye una recomendación de inversión, oferta de compra/venta ni "
+        "asesoramiento bursátil. Operar bajo su propio riesgo.</i>",
     ]
 
     return "\n".join(lineas)
