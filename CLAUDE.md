@@ -47,6 +47,44 @@ Detalle completo del hallazgo en `mvp-despertador-bursatil.md`, sección de ries
 
 (`.claude/` ya no debería trackearse desde ahora — quedó agregado al `.gitignore`.)
 
-## Próxima tarea (después de la tercera) — pendiente de definir
+## Cuarta tarea — bugs encontrados revisando los mensajes de 3 días (2026-07-04, prioridad antes de seguir sumando features)
 
-Ver "Pendiente de decidir en próxima sesión" en `mvp-despertador-bursatil.md` (fuentes de datos adicionales, Canal de WhatsApp, nombre comercial, etc.). Sin panel, sin IOL, sin sección de recomendaciones con instrumentos específicos — se mantiene el mismo criterio de alcance chico del MVP original.
+Capi compartió los mensajes reales del 02/07, 03/07 y 04/07. Dos problemas concretos:
+
+**A. Dólar oficial y MERVAL parecen congelados.**
+- El dólar oficial mostró exactamente $1460/$1510 los 3 días, sin variar un solo peso.
+- El MERVAL mostró exactamente el mismo valor (1714487) Y la misma variación (+2.9%) los 3 días — esto es virtualmente imposible en un índice real en ruedas distintas, es casi seguro un bug de datos stale/cacheados, no una coincidencia real de mercado.
+- El resto del dólar (blue, MEP, CCL) sí varió correctamente entre el día 2 y el día 3, y las flechas de variación calculan bien contra el snapshot cuando el dato de origen cambia — el problema parece acotado a estos dos campos específicos (oficial y MERVAL), no a la lógica de comparación en general.
+- **A investigar:** por qué `dolar.py` (casa "oficial") y `bcra.py` (MERVAL) están devolviendo el mismo valor día tras día — revisar si es un problema del fetch (caché, endpoint mal armado, parseo de la respuesta) o si realmente estadisticasbcra.com no está actualizando esa serie.
+
+**B. El bot no le llega a otras personas, solo a Capi.**
+- Causa más probable: el script manda el mensaje a un único `TELEGRAM_CHAT_ID` fijo (el chat privado de prueba de Capi, obtenido con `getUpdates` durante el setup — ver `PROGRESS.md`, 2026-07-02). Un bot 1:1 de Telegram no puede mandarle mensajes a alguien que no inició una conversación con él, y aunque la inicie, el código actual no tiene ningún mecanismo para detectar nuevos chats ni guardar una lista de suscriptores — solo conoce el chat_id de Capi, hardcodeado.
+- **Opción recomendada, coherente con la decisión que ya tomamos para WhatsApp:** pasar de bot 1:1 a **Canal de Telegram** — el bot publica en el canal, cualquiera se suscribe libremente sin que el código tenga que conocer cada chat_id individual. Mismo patrón de distribución que el Canal de WhatsApp ya decidido.
+- **Alternativa si se prefiere mantener el bot 1:1:** agregar manejo de suscriptores (detectar `/start`, guardar cada chat_id nuevo en el snapshot o un archivo aparte, loopear el envío a todos). Más trabajo y no escala tan bien como un canal.
+- Decisión de cuál camino tomar: pendiente, a definir con Capi antes de que Code lo implemente.
+
+**Orden sugerido:** resolver A y B antes de sumar cualquier feature nueva (Canal de WhatsApp, más fuentes de datos, etc.) — sin datos confiables y sin que el mensaje le llegue a nadie más que a Capi, no tiene sentido seguir escalando el producto.
+
+## Quinta tarea — panel de administración (2026-07-04, en paralelo, no bloquea ni bloquea a la Cuarta tarea)
+
+Capi confirmó que el panel de control (antes documentado como "V2, recién con tracción real") se puede empezar a construir **en paralelo** desde ya. No es MVP, no reemplaza ni compite en prioridad con la Cuarta tarea (bugs) — son pistas separadas.
+
+Ver detalle completo de requisitos en `mvp-despertador-bursatil.md`, sección "Arquitectura V2 (paralelo, no bloquea el MVP): panel de control". Resumen:
+
+- Front con diseño propio (Next.js tentativo) para administrar el sistema — no consola/texto plano.
+- Gestión de fuentes de datos sin tocar código.
+- La IA arma las notas/mensajes automáticamente desde las fuentes activas (generaliza lo que ya existe en el MVP).
+- Logs, problemas y reportes en formato legible y rápido de escanear, no logs crudos.
+- Métricas de audiencia por canal (WhatsApp, Telegram gratis, bot pago).
+- Propuestas adicionales a confirmar con Capi antes de construir: preview del mensaje antes de enviar (editar/aprobar a mano), alertas proactivas cuando algo falla o un dato se ve anómalo, historial de envíos con estado, evolución de suscriptores en el tiempo, control de costos de las APIs pagas, interruptor por canal, gestión de suscripciones pagas (para el bot nivel 3, más adelante).
+- Stack tentativo: Supabase (backend/DB) + Next.js (frontend) + mismo pipeline de Claude API del MVP, parametrizado por fuente.
+
+## Modelo de negocio ampliado — roadmap de producto (2026-07-04)
+
+Ver detalle completo en `mvp-despertador-bursatil.md`, sección "Modelo de negocio ampliado". Resumen para Code:
+
+- **Nivel 1** (futuro): redes sociales (Instagram, TikTok, X, Threads) como embudo de marketing hacia los canales.
+- **Nivel 2** (futuro, después de resolver bugs): escalar de 1 a 3 tandas diarias en los canales gratis.
+- **Nivel 3** (incremental, en paralelo desde ya): bot de Telegram pago con info premium (hora a hora, último momento, tendencias de X/Twitter). Se va construyendo de a poco, sin bloquear el resto.
+- **Orden de prioridad confirmado:** Cuarta tarea (bugs) > distribución de Telegram/WhatsApp > recién ahí 3 tandas diarias > redes sociales. El panel (Quinta tarea) y el bot pago (nivel 3) corren en paralelo a todo esto, no bloquean ni son bloqueados.
+- Nombre comercial del Despertador: sigue sin definir, no bloquea nada.

@@ -1,5 +1,66 @@
 # PROGRESS.md
 
+## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
+
+### Bug A — datos "congelados" (dólar oficial + MERVAL) → resuelto (presentación honesta)
+
+Diagnóstico (verificado en vivo, no era bug de parseo):
+- **Dólar oficial:** dolarapi.com sirve el oficial con lag — su `fechaActualizacion` va uno o
+  más días detrás de blue/MEP/CCL. El valor $1460/$1510 era real, sólo viejo.
+- **MERVAL:** peor — la serie del tier gratis de estadisticasbcra.com **termina el
+  2024-08-30** (valor 1714487.33). Está congelada hace ~2 años; por eso valor y variación
+  (+2.9%, el movimiento 29→30/08/2024) se repetían idénticos todos los días.
+
+Solución (decisión de Capi: mostrar la fecha del dato, no marcar variación falsa):
+- `dolar.py` y `bcra.py` ahora devuelven `fecha_origen` de cada dato.
+- `formatter.py` usa **frescura relativa**: compara cada valor contra el más nuevo del propio
+  lote (no contra "hoy", porque a las 8am/fin de semana la fuente siempre trae el cierre del
+  día hábil anterior y marcaría todo como viejo). Si un campo quedó rezagado, muestra
+  `(al dd/mm)` —con año si es de otro año, ej. `(al 30/08/2024)`— y **omite la flecha**.
+  Un campo fresco se comporta igual que antes.
+- Nuevo `detectar_anomalias()` reutiliza esa lógica para alimentar el panel.
+- Validado local con datos reales + unit checks del parseo de fechas y del sufijo.
+
+> **Pendiente de producto (no de código):** mostrar un MERVAL de agosto 2024 todos los días,
+> aunque sea honesto, es de poca utilidad. A decidir con Capi en la próxima ronda: ocultar la
+> línea de MERVAL hasta tener una fuente fresca, o buscar fuente alternativa (IOL / API BCRA).
+> Esta ronda dejó la opción "buscar fuente" explícitamente afuera.
+
+### Bug B — el reporte sólo le llegaba a Capi → resuelto por diseño (Canal de Telegram)
+
+Causa: se enviaba a un único `TELEGRAM_CHAT_ID` (chat 1:1). Un bot 1:1 no puede escribirle a
+quien no le habló primero. Decisión de Capi: **Canal de Telegram** (el bot publica, cualquiera
+se suscribe). No requiere cambio de código —`sendMessage` publica igual en un canal si el bot
+es admin— sólo setup manual + cambiar el secret. Documentado en `README.md` y `.env.example`.
+
+**Acción manual pendiente de Capi:** crear el canal, sumar el bot como admin, y apuntar
+`TELEGRAM_CHAT_ID` (secret de Actions + `.env`) al `@usuario`/id del canal.
+
+### Quinta tarea — arranque del panel (primera rebanada: Historial de envíos)
+
+- **Supabase:** proyecto nuevo `despertador-bursatil` (id `kazjrgekyxwloumkkhvu`, región
+  sa-east-1, free tier $0). Tabla `envios` (fecha, canal, estado, mensaje, datos jsonb,
+  anomalías jsonb, error). RLS activa **sin policies públicas**: acceso sólo server-side.
+- **Pipeline → DB:** `supabase_log.py` inserta una fila por corrida vía PostgREST (sin sumar
+  dependencias). Cableado en `main.py`, **no bloqueante** (mismo criterio que el resumen
+  macro). Envs nuevas: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **Panel Next.js** en `panel/`: App Router + diseño propio (light/dark), página "Historial de
+  envíos" que lee de Supabase server-side (service_role, nunca en el browser) y muestra fecha,
+  estado, canal, anomalías destacadas y preview del mensaje. `npm run build` OK; render
+  validado end-to-end contra una fila de ejemplo.
+
+**Acciones manuales pendientes de Capi para dejarlo operativo:**
+1. Copiar la `service_role` key de Supabase (dashboard → Project Settings → API) a:
+   los secrets de GitHub Actions (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) y a
+   `panel/.env.local`.
+2. (Opcional) deployar el panel a Vercel para no correrlo local.
+
+### Pendiente de commit
+
+Los cambios de código de esta tanda están en el working tree, **sin commitear todavía** (a la
+espera de revisión). El `.gitignore` del panel ya excluye `node_modules` y `.next`; se
+commitea sólo el código fuente.
+
 ## Estado actual (2026-07-02, fin del día)
 
 MVP operativo: el cron de GitHub Actions manda el reporte de dólar + MERVAL + resumen macro con IA a Telegram todos los días a las 8am (Argentina). Los 4 secrets (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BCRA_API_TOKEN`, `ANTHROPIC_API_KEY`) ya están cargados en GitHub. Las dos tareas del roadmap de hoy (script base + resumen macro con IA) están hechas y validadas en local; falta solo ver la corrida automática de mañana para confirmar que también anda sola en Actions con las 4 credenciales — no requiere acción manual, se revisa mañana.

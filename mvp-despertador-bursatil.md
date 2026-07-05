@@ -103,20 +103,31 @@ Ana, monotributista en San Rafael, recibe el mensaje en Telegram todas las maña
 5. Validar el formato con 2 semanas de publicación antes de replicar a los otros 3 canales (X, Instagram, email) — en curso, arrancó 2026-07-02.
 6. Métrica mínima de validación: suscriptores al canal + tasa de apertura/lectura (Telegram lo da nativo; Canal de WhatsApp da conteo de seguidores nativo también) — pendiente de trackear una vez haya audiencia real, hoy el canal está en pruebas.
 
-## Arquitectura V2 (futuro, no MVP): panel de control
+## Arquitectura V2 (paralelo, no bloquea el MVP): panel de control
 
-**Decisión (2026-07-01):** esto queda documentado como arquitectura objetivo, no se construye ahora. El MVP sigue siendo el script simple (cron + Telegram/Canal de WhatsApp) para validar rápido. El panel se construye recién cuando el Despertador tenga tracción real — evita repetir el error de sumar todo de una antes de validar la hipótesis básica.
+**Decisión (2026-07-01, ampliada 2026-07-04):** esto queda documentado como arquitectura objetivo. Capi confirmó el 2026-07-04 que se puede empezar a construir **en paralelo** al resto (no bloquea ni depende del MVP), pero **no es requisito para el MVP** — el criterio de alcance chico sigue aplicando a lo que se lanza primero al público.
 
-**Qué resolvería el panel cuando llegue el momento:**
+**Requisitos pedidos por Capi (2026-07-04):**
 
-- Gestión de fuentes de datos: agregar/sacar APIs o feeds sin tocar código (hoy las fuentes están hardcodeadas en el script).
-- IA con contexto general de todas las fuentes activas, generando el mensaje diario completo automáticamente (hoy el análisis con Claude API ya existe en el MVP, pero acotado a las fuentes fijas definidas).
-- Visibilidad operativa: logs, historial de mensajes enviados, reenvío manual si algo falla.
-- Envío automático a los canales configurados, sin intervención manual una vez aprobado el flujo.
+- Front con diseño propio (no solo texto/consola) para administrar el sistema.
+- Gestión de fuentes de datos: agregar/sacar APIs o feeds sin tocar código.
+- La IA arma las notas/mensajes automáticamente a partir de las fuentes activas (ya existe la base de esto en el MVP, el panel lo generaliza).
+- Revisión de problemas legible y rápida: en vez de tener que ir al código/logs crudos a buscar el error, el panel muestra logs, problemas y reportes en un formato fácil de leer de un vistazo.
+- Métricas de audiencia: cuánta gente hay en cada canal (WhatsApp, Telegram gratis, bot pago) y usando el bot, visibles desde el panel.
+
+**Propuestas adicionales (sugeridas por Cowork, a confirmar con Capi antes de construir):**
+
+- **Preview antes de enviar:** ver el mensaje generado por la IA antes de que salga, con opción de editar o aprobar a mano — red de seguridad ante bugs de datos como el de MERVAL congelado que encontramos hoy, o ante un resumen de IA que salga raro.
+- **Alertas proactivas, no solo logs pasivos:** que el panel (o un aviso aparte, ej. al propio Telegram de Capi) avise solo cuando algo falla o cuando un dato parece anómalo (ej. mismo valor que ayer en un campo que debería variar) — en vez de depender de que Capi entre a revisar todos los días.
+- **Historial de envíos con estado:** qué se mandó, cuándo, a qué canal, y si salió bien o con error — no solo el mensaje en sí.
+- **Evolución de suscriptores en el tiempo** (no solo el número actual), para ver tendencia de crecimiento por canal.
+- **Control de costos:** cuánto se gastó en Claude API y otras APIs pagas (relevante cuando se sume IOL o el bot pago con más volumen de llamadas).
+- **Interruptor por canal:** poder pausar un canal puntual desde el panel (ej. si WhatsApp banea o restringe la cuenta) sin tener que tocar código ni esperar un deploy.
+- **Gestión de suscripciones pagas** para el bot nivel 3, cuando se defina el modelo de precio — probablemente lo último en construirse de esta lista.
 
 **Stack tentativo para cuando se construya** (no confirmar todavía): backend con base de datos (Supabase, coherente con el resto del holding) + frontend simple de administración (Next.js) + el mismo pipeline de Claude API del MVP, pero parametrizado por fuente en vez de hardcodeado.
 
-**Disparador para arrancar el panel:** cuando el Despertador tenga audiencia real y agregar/sacar fuentes a mano en el código empiece a ser fricción genuina — no antes.
+**Cómo se relaciona con el resto del roadmap:** puede arrancarse en paralelo desde ya (no hay que esperar a que el Despertador tenga tracción, a diferencia de la decisión original del 07-01), pero no debe demorar ni competir por foco con resolver primero los bugs de la Cuarta tarea y la distribución de Telegram/WhatsApp — esas siguen siendo prioridad absoluta antes que cualquier feature nueva, panel incluido.
 
 ## Resumen macro con IA — fuentes y método (definido 2026-07-02)
 
@@ -139,6 +150,27 @@ Ana, monotributista en San Rafael, recibe el mensaje en Telegram todas las maña
 Esto es mejor que lo que se había anotado antes para "fuentes oficiales" (que asumía scraping) — reemplaza esa idea. Ninguna reemplaza a estadisticasbcra.com para MERVAL (ya integrado), pero sí son la fuente correcta si más adelante se agregan datos de inflación/reservas al reporte.
 
 **Método del resumen — implementado (2026-07-02):** el script junta los titulares recientes (últimas 24hs) de los 3 RSS + los datos duros ya calculados (dólar, MERVAL, brecha), y se los pasa a Claude API (`claude-haiku-4-5`) con un prompt que pide una síntesis de 2-4 oraciones del contexto macro del día, sin instrucciones de inversión. Código en `rss_news.py` (fetch + filtro 24hs) y `macro_summary.py` (prompt + llamada a la API). No bloqueante: si falla, el reporte de dólar + MERVAL se manda igual sin esa sección. Detalle completo en `PROGRESS.md`.
+
+## Modelo de negocio ampliado (definido 2026-07-04)
+
+Capi definió una estructura de 3 niveles para el producto:
+
+**Nivel 1 — Marketing/adquisición (redes sociales, gratis):** Instagram, TikTok, X (Twitter) y Threads. Contenido corto que funciona como gancho y dirige a sumarse al Canal de WhatsApp o Telegram. No es el producto en sí, es el embudo de entrada.
+
+**Nivel 2 — Producto gratis (Canal de WhatsApp/Telegram):** el reporte que ya existe, pero escalado de 1 a **3 tandas diarias**. Sigue siendo gratis, sigue siendo el gancho principal de audiencia.
+
+**Nivel 3 — Producto pago (bot de Telegram, no canal):** información premium — actualizaciones hora a hora, noticias de último momento, tendencias de mercado más marcadas, y una idea a explorar de monitorear tendencias en redes sociales (X/Twitter) que a veces adelantan información antes que los medios tradicionales. Este nivel se construye **de forma incremental**, en paralelo mientras se desarrolla el resto — no es un bloque que haya que terminar antes de lanzar nada. Precio y modelo de suscripción: sin definir todavía.
+
+**Nombre comercial del Despertador:** sigue pendiente, se define más adelante (no bloquea nada de lo anterior).
+
+**Orden de implementación acordado (2026-07-04):**
+1. Resolver los bugs de la Cuarta tarea (dólar/MERVAL congelados, bot no le llega a otros) — prioridad absoluta, nada de lo de abajo tiene sentido sin esto resuelto.
+2. Definir y migrar la distribución de Telegram (Canal vs. bot con suscriptores — ver Cuarta tarea, parte B).
+3. Recién ahí evaluar escalar a 3 tandas diarias.
+4. Recién ahí evaluar arrancar las cuentas de redes sociales (nivel 1).
+5. El bot pago (nivel 3) se va armando en paralelo a partir del punto 3, sin bloquear ni ser bloqueado por el resto — es la única pieza que Capi explícitamente quiere incremental desde ya.
+
+Esto no cambia el criterio de alcance chico que venimos aplicando — es el mapa completo de hacia dónde va el producto, pero se ejecuta en el orden de arriba, no todo junto.
 
 ## Repo y arranque en Claude Code
 
