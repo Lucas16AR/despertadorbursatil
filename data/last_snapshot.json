@@ -3,22 +3,26 @@
     "oficial": {
       "nombre": "Oficial",
       "compra": 1460,
-      "venta": 1510
+      "venta": 1510,
+      "fecha_origen": "2026-07-03T18:55:00.000Z"
     },
     "blue": {
       "nombre": "Blue",
       "compra": 1490,
-      "venta": 1510
+      "venta": 1510,
+      "fecha_origen": "2026-07-05T11:59:00.000Z"
     },
     "bolsa": {
       "nombre": "MEP",
       "compra": 1522.9,
-      "venta": 1526
+      "venta": 1526,
+      "fecha_origen": "2026-07-05T11:59:00.000Z"
     },
     "contadoconliqui": {
       "nombre": "CCL",
       "compra": 1566.8,
-      "venta": 1568.8
+      "venta": 1568.8,
+      "fecha_origen": "2026-07-05T11:59:00.000Z"
     }
   },
   "brecha_mep_oficial": 1.0596026490066226
