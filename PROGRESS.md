@@ -2,6 +2,14 @@
 
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
+**Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los
+mensajes reales (datos congelados + el reporte no le llegaba a nadie más que a él) y se arrancó
+en paralelo el panel de administración. Todo quedó **commiteado, pusheado a `origin/master` y
+validado end-to-end** (envío real al canal + fila real en Supabase + panel leyéndola). Al cierre
+faltaban dos acciones manuales de Capi (crear el canal y cargar la key de Supabase): ambas se
+hicieron y se validaron en esta misma sesión. Detalle abajo, y el bloque final "Cierre de la
+sesión" tiene los archivos tocados, los commits y el estado operativo resultante.
+
 ### Bug A — datos "congelados" (dólar oficial + MERVAL) → resuelto (presentación honesta)
 
 Diagnóstico (verificado en vivo, no era bug de parseo):
@@ -58,11 +66,55 @@ vacía para que producción arranque en limpio; la puebla el próximo envío del
 
 **Pendiente opcional (no bloquea):** deployar el panel a Vercel para no correrlo local.
 
-### Pendiente de commit
+### Cierre de la sesión — archivos, commits y estado operativo
 
-Los cambios de código de esta tanda están en el working tree, **sin commitear todavía** (a la
-espera de revisión). El `.gitignore` del panel ya excluye `node_modules` y `.next`; se
-commitea sólo el código fuente.
+**Archivos tocados / creados:**
+- `dolar.py`, `bcra.py` — capturan `fecha_origen` de cada dato (modificados).
+- `formatter.py` — frescura relativa + `detectar_anomalias()` (modificado).
+- `main.py` — cablea el registro en Supabase, no bloqueante (modificado).
+- `supabase_log.py` — **nuevo**: inserta la fila del envío vía PostgREST.
+- `telegram_client.py` — **sin cambios** (el mismo `sendMessage` publica en el canal).
+- `.env.example`, `.github/workflows/daily-report.yml` — sumadas envs de Supabase (modificados).
+- `README.md` — sección "Distribución: Canal de Telegram" (modificado).
+- `panel/` — **nuevo**: app Next.js completa (App Router, `app/`, `lib/supabase.ts`, estilos
+  propios light/dark, `.env.local.example`, `.gitignore` propio que excluye `node_modules`/`.next`).
+
+**Commits (todos en `origin/master`, working tree limpio):**
+- `534afa5` — Bug A: frescura del dato, sin variación falsa.
+- `f24eeb8` — Bug B (Canal de Telegram) + arranque del panel.
+- `4235681` — PROGRESS + notas de planificación (Cuarta/Quinta).
+- `dcf267d` — Cierre de las 2 acciones manuales (canal + Supabase).
+
+**Credenciales / infra (referencia):**
+- Secrets nuevos en GitHub Actions: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. `TELEGRAM_CHAT_ID`
+  pasó del chat privado de Capi a `@despertadorbursatil`.
+- Proyecto Supabase: `despertador-bursatil`, ref `kazjrgekyxwloumkkhvu`, región sa-east-1, free
+  tier ($0/mes). Tabla `envios` con RLS activa sin policies públicas (acceso sólo server-side con
+  la service_role key).
+- La `service_role` key vive sólo en los secrets de Actions, en el `.env` raíz (gitignored) y en
+  `panel/.env.local` (gitignored). Nunca se commitea ni llega al browser.
+
+**Cómo correr el panel** (para quien lo levante después): `cd panel && npm install && npm run dev`
+(con `panel/.env.local` completado a partir de `.env.local.example`). Lee la tabla `envios` de
+Supabase server-side y lista los envíos con estado, anomalías y preview. Deploy a Vercel: opcional.
+
+**Estado operativo al cierre de la sesión:**
+- El reporte diario se publica solo, cada mañana 8am (AR), en el **Canal de Telegram**
+  `@despertadorbursatil` — abierto a cualquier suscriptor. Datos honestos (campos rezagados
+  marcados `(al dd/mm)` y sin flecha).
+- Cada envío del cron queda **registrado en Supabase** y visible desde el panel.
+- La tabla `envios` se dejó **vacía** a propósito; la puebla el próximo envío del cron.
+
+**Pendientes para próximas sesiones (documentados, ninguno bloquea):**
+1. Decisión de producto sobre el **MERVAL congelado de 2024** (ocultar la línea vs. buscar fuente
+   fresca — IOL / API BCRA). Ver la nota "Pendiente de producto" en el Bug A de arriba.
+2. Réplica del contenido al **Canal de WhatsApp** (próximo paso de distribución ya decidido).
+3. Escalar a **3 tandas diarias** y luego redes sociales (nivel 1) — según el "Modelo de negocio
+   ampliado" del `mvp-despertador-bursatil.md`.
+4. Próximas rebanadas del **panel**: gestión de fuentes sin código, métricas de audiencia por
+   canal, preview-antes-de-enviar con aprobación, alertas proactivas, interruptor por canal.
+5. Deploy opcional del panel a Vercel.
+6. Nombre comercial del Despertador (sigue sin definir, no bloquea nada).
 
 ## Estado actual (2026-07-02, fin del día)
 
