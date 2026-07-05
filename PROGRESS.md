@@ -33,8 +33,9 @@ quien no le habló primero. Decisión de Capi: **Canal de Telegram** (el bot pub
 se suscribe). No requiere cambio de código —`sendMessage` publica igual en un canal si el bot
 es admin— sólo setup manual + cambiar el secret. Documentado en `README.md` y `.env.example`.
 
-**Acción manual pendiente de Capi:** crear el canal, sumar el bot como admin, y apuntar
-`TELEGRAM_CHAT_ID` (secret de Actions + `.env`) al `@usuario`/id del canal.
+**Cerrado (2026-07-05):** canal público `@despertadorbursatil` creado, bot agregado como
+admin, `TELEGRAM_CHAT_ID` actualizado (secret de Actions + `.env`). Validado con un envío real:
+el reporte se publicó en el canal (HTTP 200, `message_id` 2). El cron de las 8am ya postea ahí.
 
 ### Quinta tarea — arranque del panel (primera rebanada: Historial de envíos)
 
@@ -49,11 +50,13 @@ es admin— sólo setup manual + cambiar el secret. Documentado en `README.md` y
   estado, canal, anomalías destacadas y preview del mensaje. `npm run build` OK; render
   validado end-to-end contra una fila de ejemplo.
 
-**Acciones manuales pendientes de Capi para dejarlo operativo:**
-1. Copiar la `service_role` key de Supabase (dashboard → Project Settings → API) a:
-   los secrets de GitHub Actions (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) y a
-   `panel/.env.local`.
-2. (Opcional) deployar el panel a Vercel para no correrlo local.
+**Cerrado (2026-07-05):** `service_role` key cargada en los secrets de GitHub Actions
+(`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`), en el `.env` raíz y en `panel/.env.local`.
+Validado end-to-end con la key real: el pipeline insertó una fila en `envios` (verificada en la
+DB) y el panel la leyó y renderizó (fecha ART, estado, anomalías y preview). La tabla se dejó
+vacía para que producción arranque en limpio; la puebla el próximo envío del cron.
+
+**Pendiente opcional (no bloquea):** deployar el panel a Vercel para no correrlo local.
 
 ### Pendiente de commit
 
