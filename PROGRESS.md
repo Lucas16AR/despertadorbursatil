@@ -1,5 +1,119 @@
 # PROGRESS.md
 
+## 2026-07-09 — Undécima tarea: auditoría general del sistema (esfuerzo máximo)
+
+Auditoría de punta a punta de todo lo construido (Primera a Décima tarea): los 15 módulos
+Python, los 2 workflows, seguridad/secretos, costos, consistencia de producto y el panel.
+Todo cambio se validó antes de commitear (compilación + 28 tests unitarios nuevos + corrida
+con datos reales de todas las fuentes + build del panel). Estructura en los 3 grupos pedidos.
+
+### (a) Bugs reales encontrados y corregidos
+
+1. **Cualquier caída de estadisticasbcra.com tumbaba el envío completo.** `fetch_merval()` se
+   llamaba sin protección en `main.py` — un 403 (ya pasó una vez, ver 2026-07-02) o un
+   `BCRA_API_TOKEN` ausente cancelaban todo el reporte, cuando `formatter` ya sabe armar el
+   mensaje sin MERVAL. Ahora es no bloqueante: si falla, el reporte sale sin esa línea. Con esto
+   se cierra la pregunta de la auditoría "¿de verdad ningún fetch individual puede tirar abajo
+   el envío?": ahora **solo** la caída de dolarapi.com (el dato central) detiene el envío; MERVAL,
+   riesgo país, RSS y el resumen con IA son todos no bloqueantes.
+2. **Una casa faltante o con precio nulo en dolarapi.com crasheaba el pipeline.**
+   `calcular_brecha_mep_oficial` hacía `dolares["oficial"]["venta"]` sin chequear (KeyError si la
+   fuente no trae esa casa) y el formateo `:.0f` tiraba TypeError si `venta` venía null. Ahora:
+   `fetch_dolares` filtra casas con valores no numéricos, la brecha devuelve `None` si faltan sus
+   casas, y el mensaje omite el "Destacado del día" en ese caso — el resto del reporte sale igual.
+3. **La variación "· día" del cierre podía comparar contra otro día.** Si la pre-apertura de hoy
+   fallaba, `inicio_dia.json` quedaba con los datos de ayer (o más viejos) y el cierre mostraba
+   una variación "del día completo" falsa. El snapshot ahora guarda la fecha (ART) y el cierre lo
+   ignora si no es de hoy. (Mismo espíritu que el Bug A de la Cuarta tarea: nunca mostrar una
+   variación engañosa.)
+4. **Un feed RSS colgado podía demorar el envío horas.** `feedparser.parse(url)` descarga con
+   urllib **sin timeout**; un feed que no responde bloqueaba la corrida hasta el timeout del job
+   de Actions (6 horas). Ahora cada feed se baja con `requests` (timeout 10s) y si uno falla se
+   sigue con los demás. Validado en vivo: los 5 feeds siguen entregando (173 titulares).
+5. **El bot token podía filtrarse a los logs (seguridad).** La URL de la API de Telegram lleva el
+   token adentro, y tanto `raise_for_status()` como las excepciones de red de `requests` incluyen
+   la URL en su mensaje → un envío fallido habría impreso el token en el traceback. **El repo es
+   público** (verificado vía API de GitHub), así que esos logs de Actions son visibles; GitHub
+   enmascara los secrets registrados, pero no hay que depender de una sola capa.
+   `telegram_client.py` ahora sanitiza ambos caminos de error (nunca propaga la URL).
+
+### (b) Mejoras aplicadas directamente (bajo riesgo)
+
+1. **Disclaimer legal en los 6 mensajes** (ítem 5 de la auditoría): la lección educativa y las
+   efemérides llevaban textos cortos propios, no el disclaimer de la Tercera tarea. El texto legal
+   se extrajo a una constante compartida (`formatter.DISCLAIMER`) y ahora cierra los 6 mensajes.
+   Las efemérides conservan además su atribución "Datos históricos vía Wikipedia".
+2. **Las corridas fallidas ahora quedan registradas en Supabase** con `estado="error"` y el motivo.
+   Antes el panel tenía el badge de error pero ningún fallo llegaba a la tabla (si algo crasheaba,
+   no se registraba nada). `main.py` registra el error y **re-lanza** — el run de Actions sigue
+   marcándose rojo, no se pierde visibilidad. Aplica también al caso "contenido no generado, no se
+   envía nada", que antes quedaba solo en los logs.
+3. **El panel muestra la tanda de cada envío** (badge con `datos.momento`): con 6 mensajes/día el
+   historial era indistinguible. Tolera envíos viejos sin ese campo. `npm run build` OK.
+4. **28 tests unitarios nuevos (`tests.py`)** sobre la lógica más frágil y más retocada: parseo de
+   fechas/zonas, frescura relativa, variaciones (%, pp, colores invertidos), brecha con casas
+   faltantes, armado del mensaje (destacado condicional, "· día" solo en cierre, MERVAL congelado,
+   riesgo país sin flecha, disclaimer al final), agrupador de titulares y momentos. Corren sin
+   red y sin API keys (`python -m unittest tests`). **Workflow de CI nuevo** (`tests.yml`) en cada
+   push/PR — separado del reporte diario a propósito: un test fallido avisa pero jamás bloquea un
+   envío de producción.
+5. Higiene menor de tipos: `brecha_mep_oficial` es ahora `float | None` en las firmas que la
+   reciben (macro_summary), coherente con el fix (a)2.
+
+### Workflow y seguridad — auditados, sin hallazgos pendientes
+
+- **`daily-report.yml`:** los 6 cron ↔ horario argentino verificados uno a uno (11→8:00, 14→11:00,
+  15→12:00, 20:15→17:15, 22→19:00, 01:30→22:30 del día anterior ART). `concurrency` serializa
+  corridas solapadas sin cancelarlas. Si una corrida falla a mitad de camino, el paso de commit
+  del snapshot no corre y el repo no queda en estado raro (el runner es efímero; lo único que se
+  perdía era el caso del `inicio_dia`, cerrado en (a)3). `git pull --rebase --autostash` cubre la
+  divergencia con el remoto entre tandas.
+- **Secretos:** sin keys hardcodeadas en ningún módulo (barrido con grep); ningún `print` expone
+  valores sensibles; `supabase_log.py` sigue mandando la `service_role` key solo en headers
+  (nunca en URLs ni en mensajes de error) y el panel la usa solo server-side. Único hallazgo real:
+  el token de Telegram en excepciones, corregido en (a)5.
+
+### Costo real de Haiku con 6 mensajes/día (ítem 4 — ahora con número)
+
+Precios vigentes de `claude-haiku-4-5`: **US$1 por millón de tokens de entrada, US$5 por millón
+de salida.** Con los tamaños medidos en las validaciones reales de esta semana:
+
+| Mensaje | Corridas/día | Input aprox. | Output aprox. |
+|---|---|---|---|
+| Reporte de datos (resumen macro) | 4 | ~1.500 tokens | ~250 tokens |
+| Lección educativa | 1 | ~120 tokens | ~350 tokens |
+| Efemérides | 1 | ~1.300 tokens | ~400 tokens |
+
+Diario: ~7.400 in + ~1.750 out. Mensual (30 días): ~222k in (US$0,22) + ~53k out (US$0,26) ≈
+**US$0,48/mes**. Incluso duplicando los tamaños queda debajo de US$1/mes — "despreciable"
+confirmado, ahora con número para el control de costos del panel.
+
+### (c) Hallazgos que requieren decisión de Cowork/Capi (no se tocó nada)
+
+1. **La brecha puede mezclar un oficial rezagado con un MEP fresco.** El oficial de dolarapi.com
+   suele venir con lag (Cuarta tarea); la brecha se calcula igual con el último valor disponible,
+   así que en esos días el número puede sobre/subestimar la brecha real del momento. Opciones:
+   marcarla `(al dd/mm)` cuando el oficial está rezagado, ocultarla ese día, o dejarla como está
+   asumiendo el lag. Es exactamente la misma familia de decisión que el MERVAL congelado.
+2. **El riesgo país queda fuera de `detectar_anomalias` a propósito.** Su lag de 1-2 días hábiles
+   es normal (publicación diaria hábil); incluirlo con el criterio actual generaría una falsa
+   alarma todos los días en el panel. Si se lo quiere vigilar, necesita un umbral propio (ej.
+   alertar recién con >3 días hábiles de atraso).
+3. **Límite de Telegram: 4.096 caracteres por mensaje.** El reporte actual usa ~700-1.500; lejos
+   del límite, pero si algún día se agranda el resumen macro o se suman secciones, `sendMessage`
+   fallaría. Anotado como límite de diseño, no requiere acción hoy.
+4. **La lección educativa rota entre 25 temas** (se repite cada ~25 días). Ampliar la lista es
+   decisión de contenido — editar `leccion_educativa.TEMAS` es trivial.
+5. **El texto del disclaimer es idéntico en los 6 mensajes** por consistencia con la Tercera
+   tarea. Si para efemérides/lección se prefiere una variante más suave ("contenido educativo…"
+   en vez de "operar bajo su propio riesgo"), es un cambio de texto de un minuto.
+6. Arrastrados ya conocidos: MERVAL congelado de 2024 (ocultar vs. fuente nueva), pegado manual
+   del mensaje fijado/descripción del canal, deploy del panel a Vercel, nombre comercial.
+
+**Nota para Cowork:** esta sección está escrita para servir de base directa del PDF que pidió
+Capi (título, subtítulos y los 3 grupos). El detalle técnico de cada fix está en el diff del
+commit correspondiente.
+
 ## 2026-07-09 — Sexta tarea (parte C): 4 tandas diarias ancladas al mercado
 
 **Qué se hizo:** el reporte pasó de 1 envío diario a **4 tandas**, cada una con su propio
