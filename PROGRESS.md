@@ -144,6 +144,55 @@ sirve la serie histórica para calcular la variación (últimos dos puntos, igua
 - Validado con datos reales: `Riesgo país: 405 pts (-0.7%) (al 07/07)`, conviviendo con el MERVAL
   en Índices, y presente en el prompt de la IA. Sin dependencias nuevas.
 
+## 2026-07-09 — Novena tarea (A-D): de 4 a 6 mensajes diarios
+
+Implementadas las 4 respuestas de Capi. El sistema pasa a **6 mensajes/día**:
+`8:00 pre-apertura → 11:00 apertura → 12:00 lección educativa → 17:15 cierre → 19:00 efemérides
+→ 22:30 panorama del día`.
+
+**A. Tanda 22:30 — panorama general del día (no solo mercados).** Se amplió el `enfoque_macro`
+de `cierre_global` en `momento.py`: ahora pide un panorama de todo lo que pasó (incluidas
+decisiones políticas/medidas que afecten la economía), no solo el cierre de precios. Título de la
+tanda: "Panorama del día".
+
+**B. Cierre (17:15) también compara contra el inicio del día (8:00).** La pre-apertura graba un
+`data/inicio_dia.json` (nuevo snapshot en `snapshot.py`); la tanda de cierre lo carga y muestra,
+por campo de dólar, una segunda cifra `· día ±X%` (variación del día completo) además de la
+variación contra la tanda anterior. `obtener_momento` devuelve la clave resuelta para que
+`main.py` sepa cuándo grabar/leer. El workflow ahora commitea todo `data/`.
+
+**C. Variación en % en todos los campos de dólar.** Antes el dólar solo tenía flecha; ahora
+muestra también el número (`🔴▼ (-0.3%)`), como el MERVAL. Helper `_variacion_texto` en
+`formatter.py`. *Nota:* el destacado de brecha se dejó con solo la flecha a propósito — su
+"variación" son puntos porcentuales de una brecha, no un %, y mostrar "(+0.3%)" ahí confundiría.
+Si Capi lo quiere igual, se agrega como "pp".
+
+**D. Dos mensajes nuevos de contenido (12:00 lección, 19:00 efemérides).** `main.py` bifurca por
+`tipo` de momento (`datos` vs `contenido`). Mecanismo elegido por Code (el CLAUDE.md lo dejó a
+criterio) priorizando la credibilidad:
+- **Lección educativa (`leccion_educativa.py`):** un concepto de economía/finanzas explicado por
+  Haiku en 2-4 oraciones para principiantes, sin asesoramiento. El tema **rota por fecha** (lista
+  de 25 conceptos generales, no atados a Argentina) para no repetir dentro del ciclo.
+- **Efemérides (`efemerides.py`):** decisión clave de diseño — **los hechos salen de Wikipedia**
+  (feed REST "un día como hoy", gratis, sin key), NO de la memoria del modelo. Haiku solo elige 1
+  efeméride argentina (con énfasis) + 1 mundial de esa lista real y las redacta. Así se evita el
+  riesgo de que un LLM invente o se equivoque de fecha, que en un canal público dañaría la
+  credibilidad.
+- `ia.py` (nuevo): helper compartido sobre Haiku. Si la generación falla, el mensaje de contenido
+  **no se envía** (el contenido ES el mensaje; no tiene sentido mandarlo vacío) — a diferencia de
+  las tandas de datos, donde el resumen macro es opcional y el reporte igual sale.
+
+**Validado (2026-07-09) con generación real:** lección (FCI) coherente y sin asesoramiento;
+efemérides del 9/7 correctas y sourced (Congreso de Tucumán 1816 + último recital de Grateful
+Dead 1995). Estructura de ambos mensajes OK. Sin dependencias nuevas (Wikipedia y la API de
+Claude via `requests`/`anthropic` ya presentes).
+
+**Para Cowork / Capi:**
+- Costo: se pasa de 4 a 6 llamadas a Haiku/día — sigue siendo despreciable.
+- Los mensajes de contenido también se registran en Supabase (historial del panel).
+- Pendiente de contenido menor: afinar la lista de temas de la lección o el tono de las
+  efemérides es trivial (editar `leccion_educativa.TEMAS` / los system prompts).
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los
