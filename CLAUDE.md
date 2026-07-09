@@ -188,6 +188,27 @@ Hoy el dólar muestra flecha (🟢▲/🔴▼/➖) pero no un número de variaci
 
 **Con A-D, el sistema pasa de 4 a 6 mensajes diarios:** 8:00 (pre-apertura) → 11:00 (apertura) → 12:00 (lección educativa) → 17:15 (cierre, con variación del día completo) → 19:00 (efemérides AR + mundo) → 22:30 (panorama general del día, no solo mercados). Queda para Code definir si los dos mensajes nuevos (12:00 y 19:00) se generan con Claude (mismo patrón que el resumen macro) o con otro enfoque de contenido — no quedó especificado el mecanismo, solo el contenido y el horario.
 
+## Undécima tarea — auditoría general del sistema (2026-07-09, para la próxima sesión, esfuerzo máximo)
+
+Capi tiene rango de sesión extendido y va a correr esta tarea con esfuerzo máximo. El objetivo NO es sumar features nuevas — es tomar el pulso real de todo lo construido hasta ahora (Primera a Décima tarea) y dejarlo más sólido antes de seguir escalando. Revisar, corregir lo que se pueda corregir con confianza, y dejar documentado lo que requiera una decisión de producto.
+
+**Alcance — revisar TODO el sistema, de punta a punta:**
+
+1. **Todos los módulos Python** (`dolar.py`, `bcra.py`, `riesgo_pais.py`, `snapshot.py`, `formatter.py`, `telegram_client.py`, `rss_news.py`, `agrupador.py`, `macro_summary.py`, `momento.py`, `leccion_educativa.py`, `efemerides.py`, `ia.py`, `supabase_log.py`, `main.py`): buscar bugs reales (no solo estilo) — casos borde no contemplados (valores None, fuentes caídas, listas vacías, fechas mal parseadas, timezone), lógica de frescura y de variación (¿algún campo puede mostrar una flecha o un % engañoso en algún escenario no probado?), manejo de errores no bloqueante (¿de verdad ningún fetch individual puede tirar abajo el envío completo?), duplicación de código entre módulos que se pueda extraer a un helper común.
+2. **`daily-report.yml` (workflow):** revisar los 6 cron, el mapeo momento↔schedule, el manejo de `concurrency` + `git pull --rebase --autostash`, y qué pasa si dos tandas corren casi al mismo tiempo o si una tanda falla a mitad de camino (¿deja el repo en un estado raro para la siguiente?).
+3. **Seguridad y secretos:** confirmar que ninguna key/token quedó hardcodeada o loggeada en texto plano en ningún módulo nuevo (sobre todo los de la Novena/Décima, que son los más recientes y menos revisados). Revisar que `supabase_log.py` siga sin exponer la `service_role` key fuera del server.
+4. **Costo real:** con 6 mensajes/día (4 de datos + 2 de contenido), estimar el costo mensual real de Haiku (tokens de entrada/salida aproximados por tipo de mensaje) y dejarlo anotado — hasta ahora todo se documentó como "despreciable" pero nunca se puso un número.
+5. **Consistencia de producto:** revisar que el disclaimer legal (Tercera tarea) esté presente en los 6 mensajes, no solo en los de datos — sobre todo lección educativa y efemérides, que son contenido nuevo y no quedó explícito si lo llevan.
+6. **Panel (`panel/`):** ¿sigue compilando y leyendo bien la tabla `envios` de Supabase con el nuevo campo `momento` y los mensajes de tipo `contenido`? Validar que el historial de envíos no se rompa con las categorías nuevas.
+7. **Tests:** si no hay tests automatizados todavía, evaluar si vale la pena sumar al menos tests unitarios chicos para la lógica más frágil (parseo de fechas, cálculo de variación/frescura, `agrupador.py`) — es la lógica que más veces se tocó y la que más silenciosamente podría romperse con el próximo cambio.
+
+**Reglas de la auditoría:**
+- **Corregir con confianza los bugs reales** (los que tienen una solución objetivamente correcta, sin ambigüedad de producto) — no dejarlos solo anotados.
+- **No tocar el contenido/tono/criterio de producto** (ej. no cambiar textos, no agregar mensajes nuevos, no cambiar horarios) sin marcarlo como propuesta para Cowork/Capi primero.
+- **No romper nada que hoy funciona en producción** — cualquier cambio se valida antes de commitear (mismo criterio que se usó en toda la Novena/Décima tarea).
+- Documentar todo en `PROGRESS.md` como una sección nueva "Undécima tarea — auditoría general", separando claramente: (a) bugs encontrados y corregidos, (b) mejoras aplicadas directamente por ser de bajo riesgo, (c) hallazgos que requieren decisión de Cowork/Capi antes de tocar nada.
+- **Capi quiere esta auditoría también en PDF.** Code no genera el PDF — alcanza con dejar la sección bien escrita y completa en `PROGRESS.md` (título, subtítulos, los 3 grupos de hallazgos de arriba). Cowork arma el PDF a partir de eso en la siguiente sesión de revisión.
+
 ## Décima tarea — mostrar la brecha también en pp (2026-07-09, para la próxima sesión)
 
 En la Novena tarea (parte C), Code dejó la brecha del dólar solo con flecha a propósito, porque su variación es en puntos porcentuales (pp) y no en % — mostrar "(+3%)" ahí sería confuso (se leería como variación relativa, no como el cambio real de la brecha). Capi confirmó: sumarlo igual, mostrando explícitamente la unidad correcta.
