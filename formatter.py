@@ -119,11 +119,15 @@ def armar_mensaje(
     resumen_macro: str | None = None,
     momento: dict | None = None,
     riesgo_pais: dict | None = None,
+    snapshot_inicio_dia: dict | None = None,
 ) -> str:
     referencia = _fecha_referencia(dolares)
     hoy = snapshot_anterior or {}
     dolares_ayer = hoy.get("dolares", {})
     brecha_ayer = hoy.get("brecha_mep_oficial")
+    # Datos de la primera tanda del día (pre-apertura): sólo llegan en la tanda de cierre, para
+    # mostrar además la variación del día completo (no sólo contra la tanda anterior).
+    dolares_inicio_dia = (snapshot_inicio_dia or {}).get("dolares", {})
 
     brecha_hoy = calcular_brecha_mep_oficial(dolares)
     variacion_brecha = None
@@ -162,8 +166,16 @@ def armar_mensaje(
         # actualizó contra el snapshot de ayer daría una flecha engañosa.
         if not sufijo and ayer is not None:
             variacion = (info["venta"] - ayer["venta"]) / ayer["venta"] * 100
+        # Variación del día completo (contra la pre-apertura): sólo en la tanda de cierre, que es
+        # la única que recibe `snapshot_inicio_dia`. Va como segunda cifra, sin reemplazar la de
+        # la tanda anterior.
+        extra_dia = ""
+        inicio = dolares_inicio_dia.get(casa)
+        if not sufijo and inicio is not None:
+            variacion_dia = (info["venta"] - inicio["venta"]) / inicio["venta"] * 100
+            extra_dia = f" · día {variacion_dia:+.1f}%"
         lineas.append(
-            f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_variacion_texto(variacion)}"
+            f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_variacion_texto(variacion)}{extra_dia}"
         )
 
     lineas_indices = []

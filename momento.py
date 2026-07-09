@@ -56,6 +56,10 @@ MOMENTOS = {
 
 
 def obtener_momento(clave: str | None) -> dict:
-    """Devuelve la config del momento pedido, o la de pre-apertura si la clave es
-    desconocida o vacía — así un envío nunca falla por un `MOMENTO` mal seteado."""
-    return MOMENTOS.get(clave or MOMENTO_DEFAULT, MOMENTOS[MOMENTO_DEFAULT])
+    """Devuelve la config del momento pedido (con su `clave` resuelta incluida), o la de
+    pre-apertura si la clave es desconocida o vacía — así un envío nunca falla por un `MOMENTO`
+    mal seteado. Devuelve una copia para no mutar la tabla del módulo."""
+    resuelta = clave if clave in MOMENTOS else MOMENTO_DEFAULT
+    config = dict(MOMENTOS[resuelta])
+    config["clave"] = resuelta
+    return config

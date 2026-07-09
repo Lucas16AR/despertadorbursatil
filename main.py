@@ -29,6 +29,14 @@ def main() -> None:
     snapshot_anterior = snapshot.load_previous()
     brecha_mep_oficial = calcular_brecha_mep_oficial(dolares)
 
+    # Snapshot de inicio del día: se graba en la pre-apertura y lo usa la tanda de cierre para
+    # mostrar la variación del día completo (además de la variación contra la tanda anterior).
+    snapshot_inicio_dia = None
+    if momento_cfg["clave"] == "pre_apertura":
+        snapshot.save_inicio_dia({"dolares": dolares, "brecha_mep_oficial": brecha_mep_oficial})
+    elif momento_cfg["clave"] == "cierre":
+        snapshot_inicio_dia = snapshot.load_inicio_dia()
+
     # Riesgo país: fuente aparte (argentinadatos.com), no bloqueante — si falla, el reporte sale igual.
     riesgo_pais = None
     try:
@@ -51,7 +59,13 @@ def main() -> None:
         print(f"No se pudo generar el resumen macro (no bloqueante): {error}")
 
     mensaje = armar_mensaje(
-        dolares, merval, snapshot_anterior, resumen_macro, momento=momento_cfg, riesgo_pais=riesgo_pais
+        dolares,
+        merval,
+        snapshot_anterior,
+        resumen_macro,
+        momento=momento_cfg,
+        riesgo_pais=riesgo_pais,
+        snapshot_inicio_dia=snapshot_inicio_dia,
     )
     enviar_mensaje(mensaje)
 
