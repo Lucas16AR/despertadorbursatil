@@ -28,7 +28,7 @@ def _armar_prompt(
     titulares: list[dict],
     dolares: dict,
     merval: dict | None,
-    brecha_mep_oficial: float,
+    brecha_mep_oficial: float | None,
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
 ) -> str:
@@ -36,7 +36,8 @@ def _armar_prompt(
     if enfoque:
         lineas.append(enfoque)
         lineas.append("")
-    lineas.append(f"Brecha MEP/oficial: {brecha_mep_oficial:.1f}%")
+    if brecha_mep_oficial is not None:
+        lineas.append(f"Brecha MEP/oficial: {brecha_mep_oficial:.1f}%")
     for casa, info in dolares.items():
         lineas.append(f"Dólar {info['nombre']}: venta ${info['venta']:.0f}")
     if merval is not None:
@@ -68,7 +69,7 @@ def generar_resumen_macro(
     titulares: list[dict],
     dolares: dict,
     merval: dict | None,
-    brecha_mep_oficial: float,
+    brecha_mep_oficial: float | None,
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
 ) -> str | None:

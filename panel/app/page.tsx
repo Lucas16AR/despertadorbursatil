@@ -21,11 +21,15 @@ function sinTags(html: string | null): string {
 
 function Tarjeta({ envio }: { envio: Envio }) {
   const anomalias = envio.anomalias ?? [];
+  // Qué tanda del día fue este envío (Pre-apertura, Cierre, Efemérides, ...). Viaja dentro
+  // del jsonb `datos`; los envíos anteriores a los 6 mensajes diarios no lo tienen.
+  const momento = typeof envio.datos?.momento === "string" ? envio.datos.momento : null;
   return (
     <article className="card">
       <div className="card-head">
         <span className="when">{formatearFecha(envio.enviado_at)}</span>
         <span className={`badge ${envio.estado}`}>{envio.estado}</span>
+        {momento && <span className="badge canal">{momento}</span>}
         <span className="badge canal">{envio.canal}</span>
       </div>
 

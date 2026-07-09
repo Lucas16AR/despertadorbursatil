@@ -21,13 +21,21 @@ def fetch_dolares() -> dict:
     response = requests.get(DOLARAPI_URL, timeout=10)
     response.raise_for_status()
     cotizaciones = response.json()
-    return {
-        item["casa"]: {
-            "nombre": CASAS_RELEVANTES[item["casa"]],
-            "compra": item["compra"],
-            "venta": item["venta"],
+    dolares = {}
+    for item in cotizaciones:
+        casa = item.get("casa")
+        if casa not in CASAS_RELEVANTES:
+            continue
+        compra, venta = item.get("compra"), item.get("venta")
+        # Defensa ante datos inválidos de la fuente: una casa sin precio numérico se omite,
+        # mejor que el mensaje salga sin esa línea a que el formateo tire todo el envío.
+        if not isinstance(compra, (int, float)) or not isinstance(venta, (int, float)) or venta <= 0:
+            print(f"dolarapi.com devolvió un valor inválido para '{casa}' — se omite esa casa.")
+            continue
+        dolares[casa] = {
+            "nombre": CASAS_RELEVANTES[casa],
+            "compra": compra,
+            "venta": venta,
             "fecha_origen": item.get("fechaActualizacion"),
         }
-        for item in cotizaciones
-        if item["casa"] in CASAS_RELEVANTES
-    }
+    return dolares

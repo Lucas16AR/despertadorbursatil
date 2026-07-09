@@ -11,6 +11,15 @@ ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui", "cripto"]
 # Argentina no aplica horario de verano: siempre UTC-3.
 ARG_TZ = timezone(timedelta(hours=-3))
 
+# Disclaimer legal fijo (Tercera tarea): va al final de TODOS los mensajes del canal — los de
+# datos y los de contenido (lección, efemérides) — por el riesgo regulatorio CNV y el riesgo de
+# baneo en WhatsApp por contenido percibido como "señales de trading".
+DISCLAIMER = (
+    "<i>🤖 Alerta automatizada con fines puramente informativos y educativos. "
+    "No constituye una recomendación de inversión, oferta de compra/venta ni "
+    "asesoramiento bursátil. Operar bajo su propio riesgo.</i>"
+)
+
 
 def encabezado(momento: dict | None) -> list[str]:
     """Las líneas de título del mensaje (emoji + nombre + momento + fecha, y subtítulo).
@@ -109,9 +118,13 @@ def _sufijo_frescura(fecha_origen: str | None, referencia: date | None) -> str:
     return f" (al {etiqueta})"
 
 
-def calcular_brecha_mep_oficial(dolares: dict) -> float:
-    oficial = dolares["oficial"]["venta"]
-    mep = dolares["bolsa"]["venta"]
+def calcular_brecha_mep_oficial(dolares: dict) -> float | None:
+    """Devuelve None si falta alguna de las dos casas (fuente incompleta): el destacado se
+    omite del mensaje en vez de que un KeyError tire abajo el envío completo."""
+    oficial = dolares.get("oficial", {}).get("venta")
+    mep = dolares.get("bolsa", {}).get("venta")
+    if oficial is None or mep is None or oficial == 0:
+        return None
     return (mep - oficial) / oficial * 100
 
 
@@ -161,17 +174,18 @@ def armar_mensaje(
 
     brecha_hoy = calcular_brecha_mep_oficial(dolares)
     variacion_brecha = None
-    if brecha_ayer is not None:
+    if brecha_hoy is not None and brecha_ayer is not None:
         variacion_brecha = brecha_hoy - brecha_ayer
 
-    lineas = [
-        *encabezado(momento),
-        "",
-        "🔥 <b>Destacado del día</b>",
-        f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_variacion_brecha_texto(variacion_brecha)}",
-        "",
-        "💵 <b>Dólar</b>",
-    ]
+    lineas = [*encabezado(momento), ""]
+    # Sin brecha (fuente incompleta) se omite el destacado: el resto del reporte sale igual.
+    if brecha_hoy is not None:
+        lineas += [
+            "🔥 <b>Destacado del día</b>",
+            f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_variacion_brecha_texto(variacion_brecha)}",
+            "",
+        ]
+    lineas.append("💵 <b>Dólar</b>")
 
     for casa in ORDEN_CASAS:
         info = dolares.get(casa)
@@ -229,9 +243,7 @@ def armar_mensaje(
         "",
         "<i>Fuente: dolarapi.com, estadisticasbcra.com, argentinadatos.com.</i>",
         "",
-        "<i>🤖 Alerta automatizada con fines puramente informativos y educativos. "
-        "No constituye una recomendación de inversión, oferta de compra/venta ni "
-        "asesoramiento bursátil. Operar bajo su propio riesgo.</i>",
+        DISCLAIMER,
     ]
 
     return "\n".join(lineas)

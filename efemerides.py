@@ -9,7 +9,7 @@ from datetime import datetime
 
 import requests
 
-from formatter import ARG_TZ, encabezado
+from formatter import ARG_TZ, DISCLAIMER, encabezado
 from ia import completar
 
 WIKI_URL = "https://es.wikipedia.org/api/rest_v1/feed/onthisday/events/{mes:02d}/{dia:02d}"
@@ -76,6 +76,8 @@ def generar_efemerides(momento: dict) -> str | None:
         "",
         texto.strip(),
         "",
-        "<i>🤖 Efemérides automatizadas. Datos históricos vía Wikipedia.</i>",
+        "<i>Datos históricos vía Wikipedia.</i>",
+        "",
+        DISCLAIMER,
     ]
     return "\n".join(lineas)

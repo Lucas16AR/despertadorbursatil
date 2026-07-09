@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from formatter import ARG_TZ, encabezado
+from formatter import ARG_TZ, DISCLAIMER, encabezado
 from ia import completar
 
 # Conceptos generales (no atados a Argentina, como pidió Capi), pensados para que alguien sin
@@ -63,6 +63,6 @@ def generar_leccion(momento: dict) -> str | None:
         "",
         texto.strip(),
         "",
-        "<i>🤖 Contenido educativo automatizado, con fines informativos.</i>",
+        DISCLAIMER,
     ]
     return "\n".join(lineas)
