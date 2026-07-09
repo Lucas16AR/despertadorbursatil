@@ -163,3 +163,25 @@ Cowork propuso una lista de ideas (brainstorming, ver conversación) y Capi elig
 - **Tendencia de la semana**: mini comparación "esta semana: +X%" usando el historial que ya empieza a guardar Supabase (tabla `envios`), en vez de comparar solo contra el día anterior.
 
 **Orden sugerido para la próxima sesión (a confirmar con Capi):** priorizar primero lo de la Sexta tarea (bienvenida del canal, 3 tandas) y Séptima (fuentes + deduplicación) por ser más chicas y ya bien especificadas, y de esta Octava tarea arrancar por lo "casi gratis" antes que lo de "más adelante".
+
+## Novena tarea — respuestas de Capi tras revisar la sesión del 2026-07-09 (para la próxima sesión con Code)
+
+Capi respondió a los puntos que Code dejó abiertos y sumó precisiones nuevas. Nada de esto está implementado todavía.
+
+**A. Tanda 22:30 (Balance del día) — alcance ampliado.**
+No es solo un cierre de mercados: tiene que ser un panorama general de **todo lo que pasó en el día**, incluidas decisiones políticas que puedan afectar la economía/finanzas — no acotarlo a precios. Esto es más amplio que el `enfoque_macro` actual de esa tanda en `momento.py`, hay que ajustar el prompt/enfoque para reflejar "panorama general del día", no solo "balance de mercados + cierre externo".
+
+**B. Comparación de flechas — confirmado por tanda, con un agregado en el cierre.**
+Capi confirmó que la comparación contra la tanda anterior (no contra el día anterior) está bien. **Agregado:** en la tanda de las 17:15 (Cierre), sumar además una comparación contra el inicio del día (la tanda de las 8:00) — variación del día completo, no solo desde la última tanda. Sería una segunda cifra/línea en esa tanda específica, no reemplaza la comparación normal contra la tanda anterior.
+
+**C. Mostrar variación en porcentaje en todos los mensajes, no solo flecha.**
+Hoy el dólar muestra flecha (🟢▲/🔴▼/➖) pero no un número de variación — eso solo lo tiene el MERVAL. Capi pidió que **todos los campos con variación muestren el porcentaje**, en las 4 tandas de datos (no en los mensajes educativos/efemérides, que son otro tipo de contenido).
+
+**D. Dos mensajes nuevos, separados de las tandas de datos — el sistema pasa a 6 mensajes/día.**
+
+- **12:00 — Lección educativa corta.** Contenido chico para que la gente aprenda algo de economía o finanzas, de cualquier tema (no tiene que ser sobre Argentina específicamente). Pensado para que le sirva a la audiencia argentina del canal.
+- **19:00 — Efemérides.** Un solo mensaje con **dos efemérides**: una de Argentina y una del mundo, con más énfasis/peso en la argentina. No tienen que ser estrictamente económicas — pueden ser de cualquier tema histórico relevante. Ejemplos que dio Capi como referencia de tono/formato:
+  - *"Efeméride: un día como hoy el Dr. René Favaloro se quitaría la vida debido a..."* (ejemplo de efeméride general, no económica)
+  - *"Se cumplen X años del 'Día D', el día que el gobierno de Mauricio Macri cambió sus metas económicas y financieras, para muchos el inicio del fin de su gobierno"* (ejemplo de efeméride económica/política)
+
+**Con A-D, el sistema pasa de 4 a 6 mensajes diarios:** 8:00 (pre-apertura) → 11:00 (apertura) → 12:00 (lección educativa) → 17:15 (cierre, con variación del día completo) → 19:00 (efemérides AR + mundo) → 22:30 (panorama general del día, no solo mercados). Queda para Code definir si los dos mensajes nuevos (12:00 y 19:00) se generan con Claude (mismo patrón que el resumen macro) o con otro enfoque de contenido — no quedó especificado el mecanismo, solo el contenido y el horario.
