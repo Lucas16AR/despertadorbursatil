@@ -193,6 +193,23 @@ Claude via `requests`/`anthropic` ya presentes).
 - Pendiente de contenido menor: afinar la lista de temas de la lección o el tono de las
   efemérides es trivial (editar `leccion_educativa.TEMAS` / los system prompts).
 
+## 2026-07-09 — Décima tarea: variación de la brecha en pp
+
+Cerrado el pendiente que había quedado de la Novena C. La brecha del dólar ahora muestra su
+variación en **puntos porcentuales** (diferencia simple contra la tanda anterior), con el sufijo
+`pp` para que quede claro que no es un % relativo como el resto de los campos. Ejemplo real:
+`Brecha MEP/oficial: 1.4% 🔴▲ (+0.4pp)`.
+
+- Helper `_variacion_brecha_texto` en `formatter.py`, con **colores invertidos** respecto de los
+  precios (como pidió Capi en el ejemplo `🔴▲`): brecha más ancha = desfavorable (▲ rojo), más
+  angosta = favorable (▼ verde). El resto de los campos (dólar, MERVAL, riesgo país) sigue en %,
+  sin cambios.
+- Validado con datos reales y casos borde (+/–/0/None).
+
+**Pendiente de acción manual de Capi (no código):** copiar al mensaje fijado y a la descripción
+del canal en Telegram el texto de fuentes ya actualizado en el `CLAUDE.md` (suma La Nación,
+Bloomberg Línea y argentinadatos.com).
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los

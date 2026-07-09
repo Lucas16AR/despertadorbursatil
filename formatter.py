@@ -44,6 +44,22 @@ def _variacion_texto(variacion_pct: float | None) -> str:
     return f"{_flecha(variacion_pct)} ({variacion_pct:+.1f}%)"
 
 
+def _variacion_brecha_texto(variacion_pp: float | None) -> str:
+    """Variación de la brecha en puntos porcentuales (pp), no en % — es la diferencia simple
+    entre la brecha de hoy y la de la tanda anterior, no una variación relativa. Colores
+    invertidos respecto de los precios: una brecha más ancha es desfavorable (▲ rojo) y una más
+    angosta, favorable (▼ verde). Pedido de Capi (Décima tarea, 2026-07-09)."""
+    if variacion_pp is None:
+        return ""
+    if variacion_pp > 0:
+        flecha = " 🔴▲"
+    elif variacion_pp < 0:
+        flecha = " 🟢▼"
+    else:
+        flecha = " ➖"
+    return f"{flecha} ({variacion_pp:+.1f}pp)"
+
+
 def _fecha_origen_a_fecha(fecha_origen: str | None) -> date | None:
     """Convierte el `fecha_origen` que informa cada fuente a una fecha calendario de
     Argentina. Acepta ISO 8601 con hora y zona (dolarapi, ej. '2026-07-03T18:55:00.000Z')
@@ -152,7 +168,7 @@ def armar_mensaje(
         *encabezado(momento),
         "",
         "🔥 <b>Destacado del día</b>",
-        f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_flecha(variacion_brecha)}",
+        f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_variacion_brecha_texto(variacion_brecha)}",
         "",
         "💵 <b>Dólar</b>",
     ]
