@@ -22,6 +22,14 @@ def _flecha(variacion_pct: float | None) -> str:
     return " ➖"
 
 
+def _variacion_texto(variacion_pct: float | None) -> str:
+    """Flecha + porcentaje entre paréntesis (ej. ' 🟢▲ (+0.5%)'), o '' si no hay variación.
+    Capi pidió (2026-07-09) mostrar el número, no solo la flecha, en los campos de datos."""
+    if variacion_pct is None:
+        return ""
+    return f"{_flecha(variacion_pct)} ({variacion_pct:+.1f}%)"
+
+
 def _fecha_origen_a_fecha(fecha_origen: str | None) -> date | None:
     """Convierte el `fecha_origen` que informa cada fuente a una fecha calendario de
     Argentina. Acepta ISO 8601 con hora y zona (dolarapi, ej. '2026-07-03T18:55:00.000Z')
@@ -155,7 +163,7 @@ def armar_mensaje(
         if not sufijo and ayer is not None:
             variacion = (info["venta"] - ayer["venta"]) / ayer["venta"] * 100
         lineas.append(
-            f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_flecha(variacion)}"
+            f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_variacion_texto(variacion)}"
         )
 
     lineas_indices = []

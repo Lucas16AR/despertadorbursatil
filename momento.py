@@ -42,12 +42,14 @@ MOMENTOS = {
     },
     "cierre_global": {
         "emoji": "🌙",
-        "titulo": "Balance del día",
-        "subtitulo": "Wall Street cerrado y balance de la jornada",
+        "titulo": "Panorama del día",
+        "subtitulo": "Todo lo que pasó hoy y puede mover la economía",
         "enfoque_macro": (
-            "Este es el reporte de la NOCHE, con Wall Street ya cerrado. Enfocá el "
-            "resumen en el balance del día completo (mercado local + mercados "
-            "externos) y en lo que puede marcar la agenda de mañana."
+            "Este es el reporte de la NOCHE: un PANORAMA GENERAL de todo lo que pasó "
+            "en el día, no solo precios. Cubrí el cierre de los mercados (local y "
+            "externos, con Wall Street ya cerrado) pero también las decisiones "
+            "políticas, medidas de gobierno y hechos relevantes que puedan afectar la "
+            "economía o las finanzas, y cerrá con lo que puede marcar la agenda de mañana."
         ),
     },
 }
