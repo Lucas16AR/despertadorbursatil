@@ -1,10 +1,12 @@
-"""Define los cuatro momentos del día en que sale el reporte. Cada tanda tiene su
-propio título/emoji y una instrucción de enfoque para el resumen macro, para que los
-cuatro envíos no repitan el mismo texto genérico sino que aporten algo propio del
-momento (pre-apertura, apertura de rueda, cierre local, balance global de la noche).
+"""Define los momentos del día en que sale un mensaje. Hay dos tipos:
 
-Los horarios están anclados a la rueda real de BYMA (10:30–17:00 ART desde 2025) más
-una tanda nocturna con Wall Street ya cerrado. El mapeo horario → momento vive en el
+- `datos`: las 4 tandas del reporte de mercados (pre-apertura, apertura, cierre, panorama de la
+  noche). Cada una con su enfoque para el resumen macro, para que no repitan el mismo texto.
+- `contenido`: los 2 mensajes de valor agregado (lección educativa 12:00, efemérides 19:00),
+  que no llevan datos de mercado.
+
+En total, 6 mensajes diarios. Los horarios de datos están anclados a la rueda real de BYMA
+(10:30–17:00 ART desde 2025) más una tanda nocturna. El mapeo horario → momento vive en el
 workflow de GitHub Actions; acá sólo está el contenido de cada momento."""
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ MOMENTO_DEFAULT = "pre_apertura"
 
 MOMENTOS = {
     "pre_apertura": {
+        "tipo": "datos",
         "emoji": "🌅",
         "titulo": "Pre-apertura",
         "subtitulo": "Cierre de ayer y agenda del día",
@@ -22,6 +25,7 @@ MOMENTOS = {
         ),
     },
     "apertura": {
+        "tipo": "datos",
         "emoji": "🔔",
         "titulo": "Apertura",
         "subtitulo": "Primeros movimientos de la rueda",
@@ -32,6 +36,7 @@ MOMENTOS = {
         ),
     },
     "cierre": {
+        "tipo": "datos",
         "emoji": "🌇",
         "titulo": "Cierre",
         "subtitulo": "Cómo cerró la rueda local",
@@ -41,6 +46,7 @@ MOMENTOS = {
         ),
     },
     "cierre_global": {
+        "tipo": "datos",
         "emoji": "🌙",
         "titulo": "Panorama del día",
         "subtitulo": "Todo lo que pasó hoy y puede mover la economía",
@@ -51,6 +57,18 @@ MOMENTOS = {
             "políticas, medidas de gobierno y hechos relevantes que puedan afectar la "
             "economía o las finanzas, y cerrá con lo que puede marcar la agenda de mañana."
         ),
+    },
+    "leccion_educativa": {
+        "tipo": "contenido",
+        "emoji": "📚",
+        "titulo": "Lección del día",
+        "subtitulo": "Un concepto de economía y finanzas, simple",
+    },
+    "efemerides": {
+        "tipo": "contenido",
+        "emoji": "📜",
+        "titulo": "Efemérides",
+        "subtitulo": "Un día como hoy en Argentina y el mundo",
     },
 }
 

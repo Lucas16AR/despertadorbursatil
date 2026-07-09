@@ -12,6 +12,20 @@ ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui", "cripto"]
 ARG_TZ = timezone(timedelta(hours=-3))
 
 
+def encabezado(momento: dict | None) -> list[str]:
+    """Las líneas de título del mensaje (emoji + nombre + momento + fecha, y subtítulo).
+    Compartido por el reporte de datos y los mensajes de contenido (lección, efemérides).
+    La fecha se toma en horario de Argentina, no del runner (que corre en UTC): la tanda de
+    las 22:30 ART arranca a las 01:30 UTC del día siguiente y date.today() daría mañana."""
+    fecha_hoy = datetime.now(ARG_TZ).date().strftime(FECHA_FORMATO)
+    if momento:
+        return [
+            f"{momento['emoji']} <b>Despertador Bursátil · {momento['titulo']}</b> — {fecha_hoy}",
+            f"<i>{momento['subtitulo']}</i>",
+        ]
+    return [f"📅 <b>Despertador Bursátil</b> — {fecha_hoy}"]
+
+
 def _flecha(variacion_pct: float | None) -> str:
     if variacion_pct is None:
         return ""
@@ -134,20 +148,8 @@ def armar_mensaje(
     if brecha_ayer is not None:
         variacion_brecha = brecha_hoy - brecha_ayer
 
-    # La fecha se toma en horario de Argentina, no del runner (que corre en UTC): la tanda
-    # de las 22:30 ART arranca a las 01:30 UTC del día siguiente, y date.today() imprimiría
-    # la fecha de mañana.
-    fecha_hoy = datetime.now(ARG_TZ).date().strftime(FECHA_FORMATO)
-    if momento:
-        encabezado = [
-            f"{momento['emoji']} <b>Despertador Bursátil · {momento['titulo']}</b> — {fecha_hoy}",
-            f"<i>{momento['subtitulo']}</i>",
-        ]
-    else:
-        encabezado = [f"📅 <b>Despertador Bursátil</b> — {fecha_hoy}"]
-
     lineas = [
-        *encabezado,
+        *encabezado(momento),
         "",
         "🔥 <b>Destacado del día</b>",
         f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_flecha(variacion_brecha)}",

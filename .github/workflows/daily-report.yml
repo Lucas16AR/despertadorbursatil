@@ -2,12 +2,15 @@ name: Reporte diario
 
 on:
   schedule:
-    # Horarios en UTC (Argentina es UTC-3, sin horario de verano). Anclados a la rueda
-    # real de BYMA (10:30–17:00 ART) más una tanda nocturna con Wall Street ya cerrado.
-    - cron: "0 11 * * *"    # 08:00 ART — pre-apertura
-    - cron: "0 14 * * *"    # 11:00 ART — apertura
-    - cron: "15 20 * * *"   # 17:15 ART — cierre
-    - cron: "30 1 * * *"    # 22:30 ART (01:30 UTC del día siguiente) — balance global
+    # Horarios en UTC (Argentina es UTC-3, sin horario de verano). Las 4 tandas de datos están
+    # ancladas a la rueda real de BYMA (10:30–17:00 ART) más una nocturna; los 2 mensajes de
+    # contenido (lección, efemérides) intercalados. En total, 6 mensajes por día.
+    - cron: "0 11 * * *"    # 08:00 ART — pre-apertura (datos)
+    - cron: "0 14 * * *"    # 11:00 ART — apertura (datos)
+    - cron: "0 15 * * *"    # 12:00 ART — lección educativa (contenido)
+    - cron: "15 20 * * *"   # 17:15 ART — cierre (datos)
+    - cron: "0 22 * * *"    # 19:00 ART — efemérides (contenido)
+    - cron: "30 1 * * *"    # 22:30 ART (01:30 UTC del día siguiente) — panorama del día (datos)
   workflow_dispatch:
     inputs:
       momento:
@@ -18,7 +21,9 @@ on:
         options:
           - pre_apertura
           - apertura
+          - leccion_educativa
           - cierre
+          - efemerides
           - cierre_global
 
 permissions:
@@ -52,7 +57,9 @@ jobs:
           case "$SCHEDULE" in
             "0 11 * * *")   MOMENTO="pre_apertura" ;;
             "0 14 * * *")   MOMENTO="apertura" ;;
+            "0 15 * * *")   MOMENTO="leccion_educativa" ;;
             "15 20 * * *")  MOMENTO="cierre" ;;
+            "0 22 * * *")   MOMENTO="efemerides" ;;
             "30 1 * * *")   MOMENTO="cierre_global" ;;
             *)              MOMENTO="${INPUT_MOMENTO:-pre_apertura}" ;;
           esac
