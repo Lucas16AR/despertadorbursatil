@@ -111,6 +111,20 @@ titulares crudos.
 3. Límite de mantenimiento ya conocido: cada feed es un punto más de falla si cambia de URL, pero
    el diseño no bloqueante lo mitiga (si un feed cae, el resto sigue y el reporte sale igual).
 
+## 2026-07-09 — Octava tarea (casi gratis): cripto en el mensaje
+
+Sumada la cotización **Cripto** (dólar cripto/USDT) a la sección "💵 Dólar", después de CCL.
+dolarapi.com ya la devuelve en el mismo endpoint (`casa: "cripto"`), así que fue agregar la casa
+al fetch (`dolar.py`) y al orden de renderizado (`formatter.py`) — sin integración nueva. La
+lógica de frescura y la flecha de variación la toman sola (tiene `fecha_origen` y entra al
+snapshot como cualquier otra casa; la flecha aparece a partir de la segunda corrida, cuando el
+snapshot ya la tiene). Validado con fetch real: `Cripto: compra $1558 / venta $1560`.
+
+**Resto de la Octava tarea — pendiente de definición de contenido con Capi (no es solo código):**
+glosario para principiantes, encuestas nativas de Telegram y el mensaje educativo/efeméride
+diario requieren decidir contenido/cadencia/ubicación (¿mensaje aparte o sección de una tanda?)
+antes de implementar. La cripto era el único ítem "casi gratis" 100% especificado y autónomo.
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los

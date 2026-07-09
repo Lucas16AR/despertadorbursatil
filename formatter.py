@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 
 FECHA_FORMATO = "%d/%m/%Y"
 
-ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui"]
+ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui", "cripto"]
 
 # Argentina no aplica horario de verano: siempre UTC-3.
 ARG_TZ = timezone(timedelta(hours=-3))

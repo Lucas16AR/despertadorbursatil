@@ -9,6 +9,7 @@ CASAS_RELEVANTES = {
     "blue": "Blue",
     "bolsa": "MEP",
     "contadoconliqui": "CCL",
+    "cripto": "Cripto",
 }
 
 
