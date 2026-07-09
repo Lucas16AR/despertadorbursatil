@@ -107,8 +107,10 @@ Reporte diario y automático de mercados argentinos: dólar (oficial, blue, MEP,
 
 🤖 100% informativo y automatizado. No es asesoramiento financiero ni recomendación de inversión — solo datos y contexto para que decidas vos.
 
-Fuentes: dolarapi.com, estadisticasbcra.com, Ámbito, Infobae, El Cronista.
+Fuentes: dolarapi.com, estadisticasbcra.com, argentinadatos.com, Ámbito, Infobae, El Cronista, La Nación y Bloomberg Línea.
 ```
+
+> **Actualizado (2026-07-09):** el texto de arriba ya refleja las 5 fuentes de noticias vigentes (se sumaron La Nación y Bloomberg Línea en la Séptima tarea) más argentinadatos.com (riesgo país, Octava tarea). **Pendiente de acción manual de Capi:** copiar este texto actualizado al mensaje fijado y a la descripción del canal en Telegram — no se actualiza solo, hay que pegarlo a mano como admin.
 
 Descripción del canal (campo bio):
 ```
@@ -185,3 +187,9 @@ Hoy el dólar muestra flecha (🟢▲/🔴▼/➖) pero no un número de variaci
   - *"Se cumplen X años del 'Día D', el día que el gobierno de Mauricio Macri cambió sus metas económicas y financieras, para muchos el inicio del fin de su gobierno"* (ejemplo de efeméride económica/política)
 
 **Con A-D, el sistema pasa de 4 a 6 mensajes diarios:** 8:00 (pre-apertura) → 11:00 (apertura) → 12:00 (lección educativa) → 17:15 (cierre, con variación del día completo) → 19:00 (efemérides AR + mundo) → 22:30 (panorama general del día, no solo mercados). Queda para Code definir si los dos mensajes nuevos (12:00 y 19:00) se generan con Claude (mismo patrón que el resumen macro) o con otro enfoque de contenido — no quedó especificado el mecanismo, solo el contenido y el horario.
+
+## Décima tarea — mostrar la brecha también en pp (2026-07-09, para la próxima sesión)
+
+En la Novena tarea (parte C), Code dejó la brecha del dólar solo con flecha a propósito, porque su variación es en puntos porcentuales (pp) y no en % — mostrar "(+3%)" ahí sería confuso (se leería como variación relativa, no como el cambio real de la brecha). Capi confirmó: sumarlo igual, mostrando explícitamente la unidad correcta.
+
+**Qué hacer:** en `formatter.py`, agregar al renglón de la brecha la variación en pp (diferencia simple entre el valor actual y el de la tanda anterior, no un cálculo de %), con el sufijo "pp" para que quede claro que no es lo mismo que el resto de los campos. Ejemplo: `Brecha: 40% 🔴▲ (+3pp)`. No tocar la lógica de los demás campos (dólar, MERVAL, riesgo país), que siguen en %.
