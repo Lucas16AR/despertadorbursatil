@@ -11,6 +11,8 @@ FEEDS = {
     "Ámbito": "https://www.ambito.com/rss/pages/economia.xml",
     "Infobae": "https://www.infobae.com/arc/outboundfeeds/rss/category/economia/?outputType=xml",
     "El Cronista": "https://www.cronista.com/arc/outboundfeeds/rss/category/finanzas-mercados/?outputType=xml",
+    "La Nación": "https://www.lanacion.com.ar/arc/outboundfeeds/rss/category/economia/?outputType=xml",
+    "Bloomberg Línea": "https://www.bloomberglinea.com/arc/outboundfeeds/rss/?outputType=xml",
 }
 
 VENTANA_HORAS = 24

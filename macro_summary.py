@@ -5,7 +5,14 @@ from __future__ import annotations
 
 import anthropic
 
+from agrupador import agrupar_titulares
+
 MODEL = "claude-haiku-4-5"
+
+# Cuántos grupos de titulares (ya deduplicados y ordenados por relevancia) se le pasan a Claude.
+# Acota el costo de tokens con muchas fuentes sin perder lo importante: los más cubiertos van
+# primero.
+MAX_GRUPOS_PROMPT = 20
 
 SYSTEM_PROMPT = (
     "Sos un analista que redacta un resumen macro diario para un reporte de "
@@ -35,10 +42,17 @@ def _armar_prompt(
         lineas.append(f"MERVAL: {merval['valor']:.0f} ({merval['variacion_pct']:+.1f}%)")
 
     lineas.append("")
-    lineas.append("Titulares de las últimas 24hs:")
-    if titulares:
-        for t in titulares:
-            lineas.append(f"- [{t['fuente']}] {t['titulo']}")
+    grupos = agrupar_titulares(titulares)
+    if grupos:
+        lineas.append(
+            "Titulares de las últimas 24hs, agrupados por evento y ordenados por relevancia. "
+            "Entre corchetes va cuántos medios distintos cubren cada evento: cuantos más medios, "
+            "más importante — priorizá esos al escribir el resumen."
+        )
+        for g in grupos[:MAX_GRUPOS_PROMPT]:
+            n = g["n_fuentes"]
+            etiqueta = f"{n} fuentes" if n > 1 else "1 fuente"
+            lineas.append(f"- [{etiqueta}] {g['titulo']} ({', '.join(g['fuentes'])})")
     else:
         lineas.append("(sin titulares relevantes)")
 

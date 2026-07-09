@@ -62,6 +62,55 @@ confirma en las próximas corridas automáticas (mismo criterio que se usó para
 3. Costo: son 4 llamadas a Haiku/día en vez de 1 — sigue siendo prácticamente nulo, pero queda
    anotado (se conecta con el "control de costos" del panel).
 
+## 2026-07-09 — Séptima tarea: de 3 a 5 fuentes + deduplicación/priorización
+
+**Qué se hizo:** se sumaron 2 fuentes de noticias (5 en total) y, como el propio análisis de la
+Séptima anticipaba, a partir de ~5 fuentes se agregó una capa de **deduplicación y priorización**
+antes de mandarle los titulares a Claude, para que la síntesis no se diluya con docenas de
+titulares crudos.
+
+**Fuentes: validadas con `curl` + `feedparser` (mismo proceso que las 3 originales).**
+- **Sumadas** (RSS válido, con ítems recientes en 24hs): **La Nación Economía** (feed Arc, 58
+  ítems/24hs) y **Bloomberg Línea** (feed Arc, 25 ítems/24hs). Ambas Arc, el mismo patrón
+  confiable que ya usaban Infobae/Cronista.
+- **Descartadas tras probarlas:** Clarín economía (el feed viene sin ítems reales, solo el título
+  del canal), Perfil (no tiene feed de economía; solo `/feed` general, demasiado ruidoso para un
+  reporte de mercados), BAE Negocios (sin RSS que responda), INDEC (devuelve HTML, no RSS) y BCRA
+  (404). Las institucionales quedan afuera por el mismo criterio ya aplicado a CNV/FCI: sin RSS
+  público confirmado, no se scrapea.
+
+**Deduplicación/priorización — `agrupador.py` (nuevo, solo stdlib):**
+- `agrupar_titulares()` agrupa los titulares que cubren el mismo evento (varios medios sobre la
+  misma noticia) comparando sus términos significativos (minúsculas, sin acentos, sin stopwords,
+  4+ letras; solapamiento ≥ 0.5 sobre el titular más corto) y **ordena por frecuencia entre
+  fuentes**: si varios medios distintos cubren lo mismo el mismo día, es señal barata de que es
+  relevante.
+- `macro_summary._armar_prompt()` ahora le pasa a Claude los **grupos ya deduplicados y
+  ordenados** (top 20, `MAX_GRUPOS_PROMPT`, para acotar tokens), anotando entre corchetes cuántos
+  medios cubren cada evento e instruyéndolo a priorizar los más cubiertos. `fetch_titulares` y
+  `main.py` no cambiaron: la priorización ocurre justo antes de armar el prompt.
+
+**Validado (2026-07-09) con datos reales:**
+- Fetch real de las 5 fuentes: **172 titulares crudos → 140 grupos**, 11 eventos multi-fuente. El
+  ranking puso arriba lo genuinamente importante (visita de Georgieva/FMI y plazo fijo con 4
+  medios cada uno; reservas del BCRA, inflación CABA, proyección del FMI con 2).
+- **Una** llamada real a Haiku con el prompt nuevo (sin enviar a Telegram): el resumen priorizó
+  esos eventos, en rioplatense, sin recomendaciones. Costo: ~1.440 tokens de input / 200 de
+  output — nulo (con 4 tandas/día sigue siendo despreciable).
+
+**Sin dependencias nuevas** (el agrupador es stdlib puro; `requirements.txt` no cambia).
+
+**Para Cowork / Capi (no bloquea):**
+1. **Actualizar el texto del mensaje fijado y la descripción del canal** (borradores de la Sexta
+   tarea, sección B): hoy listan "Ámbito, Infobae, El Cronista" — ahora también están La Nación y
+   Bloomberg Línea. Conviene sumarlas o poner "entre otras".
+2. El pie del mensaje (`formatter.py`) sigue acreditando solo las fuentes de dato duro
+   (dolarapi.com, estadisticasbcra.com); las de noticias alimentan el "Contexto macro" pero no se
+   listan ahí para no ensuciar cada envío con 5 medios. Si se quiere acreditarlas, es decisión de
+   contenido.
+3. Límite de mantenimiento ya conocido: cada feed es un punto más de falla si cambia de URL, pero
+   el diseño no bloqueante lo mitiga (si un feed cae, el resto sigue y el reporte sale igual).
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los
