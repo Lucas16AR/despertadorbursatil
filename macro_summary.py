@@ -17,8 +17,18 @@ SYSTEM_PROMPT = (
 )
 
 
-def _armar_prompt(titulares: list[dict], dolares: dict, merval: dict | None, brecha_mep_oficial: float) -> str:
-    lineas = [f"Brecha MEP/oficial: {brecha_mep_oficial:.1f}%"]
+def _armar_prompt(
+    titulares: list[dict],
+    dolares: dict,
+    merval: dict | None,
+    brecha_mep_oficial: float,
+    enfoque: str | None = None,
+) -> str:
+    lineas = []
+    if enfoque:
+        lineas.append(enfoque)
+        lineas.append("")
+    lineas.append(f"Brecha MEP/oficial: {brecha_mep_oficial:.1f}%")
     for casa, info in dolares.items():
         lineas.append(f"Dólar {info['nombre']}: venta ${info['venta']:.0f}")
     if merval is not None:
@@ -36,11 +46,17 @@ def _armar_prompt(titulares: list[dict], dolares: dict, merval: dict | None, bre
 
 
 def generar_resumen_macro(
-    titulares: list[dict], dolares: dict, merval: dict | None, brecha_mep_oficial: float
+    titulares: list[dict],
+    dolares: dict,
+    merval: dict | None,
+    brecha_mep_oficial: float,
+    enfoque: str | None = None,
 ) -> str | None:
-    """Devuelve el resumen de 2-4 oraciones, o None si falla la llamada a la API."""
+    """Devuelve el resumen de 2-4 oraciones, o None si falla la llamada a la API.
+    `enfoque` es la instrucción del momento del día (pre-apertura, cierre, etc.) para
+    que el resumen sea coherente con la tanda y no repita el mismo texto genérico."""
     client = anthropic.Anthropic()
-    prompt = _armar_prompt(titulares, dolares, merval, brecha_mep_oficial)
+    prompt = _armar_prompt(titulares, dolares, merval, brecha_mep_oficial, enfoque)
     try:
         response = client.messages.create(
             model=MODEL,

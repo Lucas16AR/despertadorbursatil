@@ -1,5 +1,67 @@
 # PROGRESS.md
 
+## 2026-07-09 — Sexta tarea (parte C): 4 tandas diarias ancladas al mercado
+
+**Qué se hizo:** el reporte pasó de 1 envío diario a **4 tandas**, cada una con su propio
+título, emoji y enfoque de resumen macro, para que no repitan el mismo texto genérico sino que
+aporten algo propio del momento. Horarios anclados a la rueda real de BYMA (10:30–17:00 ART)
+más una tanda nocturna:
+
+| Tanda | Hora ART | Cron (UTC) | Enfoque |
+|---|---|---|---|
+| 🌅 Pre-apertura | 08:00 | `0 11 * * *` | Cierre de ayer + agenda del día |
+| 🔔 Apertura | 11:00 | `0 14 * * *` | Primeros movimientos de la rueda |
+| 🌇 Cierre | 17:15 | `15 20 * * *` | Cómo cerró la rueda local |
+| 🌙 Balance del día | 22:30 | `30 1 * * *` | Wall Street cerrado + balance de la jornada |
+
+> **La tanda de las 22:30 la pidió Capi (2026-07-09)**, sumada a las 3 que había propuesto
+> Cowork (8:00 / 11:00 / 17:15). **Cowork: tenerla en cuenta** en todo lo que planifique de acá
+> en más (redes/nivel 1, panel, encuestas, mensaje educativo diario, etc.): ahora son 4 momentos,
+> no 3.
+
+**Cómo quedó implementado:**
+- **`momento.py` (nuevo):** define los 4 momentos (emoji, título, subtítulo y `enfoque_macro`
+  —la instrucción que se le pasa a Claude para que el resumen sea coherente con la tanda—). Si
+  la clave llega vacía o desconocida, cae en `pre_apertura` (un envío nunca falla por un
+  `MOMENTO` mal seteado).
+- **Workflow (`daily-report.yml`):** 4 entradas de cron + un paso que mapea el cron que disparó
+  la corrida (`github.event.schedule`) al momento, pasado por env var (no interpolado en el
+  script, para no abrir inyección de shell). `workflow_dispatch` ahora tiene un input `momento`
+  (choice) para disparar cualquier tanda a mano. Sumado `concurrency` + `git pull --rebase
+  --autostash` antes del push del snapshot, para que dos tandas no se pisen al commitear.
+- **`formatter.py`:** encabezado según el momento. Además **fix de un bug latente**: la fecha se
+  toma ahora en horario de Argentina (`datetime.now(ARG_TZ)`), no del runner —la tanda de las
+  22:30 ART corre a la 01:30 UTC del día siguiente y `date.today()` habría impreso la fecha de
+  mañana—.
+- **`macro_summary.py`:** `generar_resumen_macro()` acepta `enfoque` y lo antepone al prompt.
+- **`main.py`:** lee `MOMENTO` del env, lo cablea al resumen, al mensaje y al registro de
+  Supabase (guarda el `momento` dentro del jsonb `datos`, sin cambiar el esquema de la tabla).
+
+**Nada requiere acción manual:** los 4 cron ya viven en el workflow; no hay que tocar nada en
+GitHub más allá de que ya estaban los secrets. No se tocó de dónde salen los datos (dolarapi.com
+/ estadisticasbcra.com siguen igual).
+
+**Validado (2026-07-09):** compilan todos los módulos; corrida local con **fetch real** de dólar
++ MERVAL (sin enviar a Telegram) renderizó las 4 tandas con encabezados distintos y la lógica de
+frescura intacta (MERVAL marcado `(al 30/08/2024)` sin flecha). El envío real por cada cron se
+confirma en las próximas corridas automáticas (mismo criterio que se usó para el MVP original).
+
+**Decisiones / puntos para Cowork y Capi (no bloquean, pero conviene definir):**
+1. **La flecha de variación ahora compara contra la tanda anterior, no contra el día anterior.**
+   El snapshot se guarda en cada corrida, así que apertura compara vs. pre-apertura, cierre vs.
+   apertura, etc. (para el dólar que sí se mueve intradía: blue/MEP/CCL). Es coherente con un
+   producto de varias tandas ("qué se movió desde el último reporte"), pero **es un cambio de
+   comportamiento respecto del reporte único día-a-día** — si se prefiere otra base de
+   comparación (ej. siempre contra el cierre del día anterior), es una decisión de producto a
+   tomar.
+2. **La tanda de las 22:30 aporta poco dato de precio nuevo** (a esa hora BYMA y Wall Street ya
+   cerraron; MEP/CCL casi no operan post-cierre). Su valor está sobre todo en el **resumen macro**
+   (balance del día + cierre externo), no en números frescos — tenerlo en cuenta al pensar el
+   contenido de esa tanda. Ver también: el mensaje educativo/efeméride diario (Octava tarea)
+   podría vivir bien acá.
+3. Costo: son 4 llamadas a Haiku/día en vez de 1 — sigue siendo prácticamente nulo, pero queda
+   anotado (se conecta con el "control de costos" del panel).
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los

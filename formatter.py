@@ -109,6 +109,7 @@ def armar_mensaje(
     merval: dict | None,
     snapshot_anterior: dict | None,
     resumen_macro: str | None = None,
+    momento: dict | None = None,
 ) -> str:
     referencia = _fecha_referencia(dolares)
     hoy = snapshot_anterior or {}
@@ -120,8 +121,20 @@ def armar_mensaje(
     if brecha_ayer is not None:
         variacion_brecha = brecha_hoy - brecha_ayer
 
+    # La fecha se toma en horario de Argentina, no del runner (que corre en UTC): la tanda
+    # de las 22:30 ART arranca a las 01:30 UTC del día siguiente, y date.today() imprimiría
+    # la fecha de mañana.
+    fecha_hoy = datetime.now(ARG_TZ).date().strftime(FECHA_FORMATO)
+    if momento:
+        encabezado = [
+            f"{momento['emoji']} <b>Despertador Bursátil · {momento['titulo']}</b> — {fecha_hoy}",
+            f"<i>{momento['subtitulo']}</i>",
+        ]
+    else:
+        encabezado = [f"📅 <b>Despertador Bursátil</b> — {fecha_hoy}"]
+
     lineas = [
-        f"📅 <b>Despertador Bursátil</b> — {date.today().strftime(FECHA_FORMATO)}",
+        *encabezado,
         "",
         "🔥 <b>Destacado del día</b>",
         f"Brecha MEP/oficial: {brecha_hoy:.1f}%{_flecha(variacion_brecha)}",
