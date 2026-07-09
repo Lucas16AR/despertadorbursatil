@@ -110,6 +110,7 @@ def armar_mensaje(
     snapshot_anterior: dict | None,
     resumen_macro: str | None = None,
     momento: dict | None = None,
+    riesgo_pais: dict | None = None,
 ) -> str:
     referencia = _fecha_referencia(dolares)
     hoy = snapshot_anterior or {}
@@ -157,16 +158,27 @@ def armar_mensaje(
             f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_flecha(variacion)}"
         )
 
+    lineas_indices = []
     if merval is not None:
         sufijo_merval = _sufijo_frescura(merval.get("fecha_origen"), referencia)
         if sufijo_merval:
-            linea_merval = f"MERVAL: {merval['valor']:.0f}{sufijo_merval}"
+            lineas_indices.append(f"MERVAL: {merval['valor']:.0f}{sufijo_merval}")
         else:
-            linea_merval = (
+            lineas_indices.append(
                 f"MERVAL: {merval['valor']:.0f}{_flecha(merval['variacion_pct'])} "
                 f"({merval['variacion_pct']:+.1f}%)"
             )
-        lineas += ["", "📊 <b>Índices</b>", linea_merval]
+    if riesgo_pais is not None:
+        # Sin flecha de color: en riesgo país bajar es "bueno", así que el verde/rojo (pensado
+        # para precios, donde subir es verde) confundiría. Va la variación neutra + la fecha si
+        # el dato quedó rezagado respecto del dólar (se publica por día hábil).
+        sufijo_rp = _sufijo_frescura(riesgo_pais.get("fecha_origen"), referencia)
+        lineas_indices.append(
+            f"Riesgo país: {riesgo_pais['valor']:.0f} pts "
+            f"({riesgo_pais['variacion_pct']:+.1f}%){sufijo_rp}"
+        )
+    if lineas_indices:
+        lineas += ["", "📊 <b>Índices</b>", *lineas_indices]
 
     if resumen_macro:
         lineas += [
@@ -177,7 +189,7 @@ def armar_mensaje(
 
     lineas += [
         "",
-        "<i>Fuente: dolarapi.com, estadisticasbcra.com.</i>",
+        "<i>Fuente: dolarapi.com, estadisticasbcra.com, argentinadatos.com.</i>",
         "",
         "<i>🤖 Alerta automatizada con fines puramente informativos y educativos. "
         "No constituye una recomendación de inversión, oferta de compra/venta ni "

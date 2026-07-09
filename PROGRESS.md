@@ -125,6 +125,25 @@ glosario para principiantes, encuestas nativas de Telegram y el mensaje educativ
 diario requieren decidir contenido/cadencia/ubicación (¿mensaje aparte o sección de una tanda?)
 antes de implementar. La cripto era el único ítem "casi gratis" 100% especificado y autónomo.
 
+## 2026-07-09 — Octava tarea (más trabajo): riesgo país como dato duro
+
+Sumado el **riesgo país** como dato propio en la sección "📊 Índices", al lado del MERVAL. En la
+investigación original de fuentes había quedado sin resolver por falta de API gratuita; ahora se
+usa **argentinadatos.com** (`/v1/finanzas/indices/riesgo-pais`, gratis, sin key), que además
+sirve la serie histórica para calcular la variación (últimos dos puntos, igual que el MERVAL).
+
+- `riesgo_pais.py` (nuevo): `fetch_riesgo_pais()` → `{valor, variacion_pct, fecha_origen}`.
+- `main.py`: fetch **no bloqueante** (si falla, el reporte sale igual), cableado al mensaje, al
+  resumen macro (antes el riesgo país solo aparecía si algún titular lo mencionaba) y al registro
+  de Supabase.
+- `formatter.py`: se muestra `Riesgo país: 405 pts (-0.7%) (al 07/07)`. **Sin flecha de color** a
+  propósito: en riesgo país bajar es "bueno", así que el verde/rojo (pensado para precios, donde
+  subir es verde) confundiría — va la variación neutra. La fecha `(al dd/mm)` aparece porque el
+  riesgo país se publica por día hábil y suele venir 1-2 días detrás del dólar intradía (mismo
+  criterio de frescura que el resto). Pie de "Fuente" actualizado con argentinadatos.com.
+- Validado con datos reales: `Riesgo país: 405 pts (-0.7%) (al 07/07)`, conviviendo con el MERVAL
+  en Índices, y presente en el prompt de la IA. Sin dependencias nuevas.
+
 ## 2026-07-05 — Cuarta tarea (bugs A+B) + arranque de la Quinta (panel)
 
 **Resumen de la sesión (para Cowork):** se cerraron los dos bugs que Capi detectó revisando los

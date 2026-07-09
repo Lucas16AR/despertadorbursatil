@@ -11,6 +11,7 @@ from dolar import fetch_dolares
 from formatter import armar_mensaje, calcular_brecha_mep_oficial, detectar_anomalias
 from macro_summary import generar_resumen_macro
 from momento import obtener_momento
+from riesgo_pais import fetch_riesgo_pais
 from rss_news import fetch_titulares
 from telegram_client import enviar_mensaje
 
@@ -28,16 +29,30 @@ def main() -> None:
     snapshot_anterior = snapshot.load_previous()
     brecha_mep_oficial = calcular_brecha_mep_oficial(dolares)
 
+    # Riesgo país: fuente aparte (argentinadatos.com), no bloqueante — si falla, el reporte sale igual.
+    riesgo_pais = None
+    try:
+        riesgo_pais = fetch_riesgo_pais()
+    except Exception as error:
+        print(f"No se pudo obtener el riesgo país (no bloqueante): {error}")
+
     resumen_macro = None
     try:
         titulares = fetch_titulares()
         resumen_macro = generar_resumen_macro(
-            titulares, dolares, merval, brecha_mep_oficial, enfoque=momento_cfg["enfoque_macro"]
+            titulares,
+            dolares,
+            merval,
+            brecha_mep_oficial,
+            enfoque=momento_cfg["enfoque_macro"],
+            riesgo_pais=riesgo_pais,
         )
     except Exception as error:
         print(f"No se pudo generar el resumen macro (no bloqueante): {error}")
 
-    mensaje = armar_mensaje(dolares, merval, snapshot_anterior, resumen_macro, momento=momento_cfg)
+    mensaje = armar_mensaje(
+        dolares, merval, snapshot_anterior, resumen_macro, momento=momento_cfg, riesgo_pais=riesgo_pais
+    )
     enviar_mensaje(mensaje)
 
     snapshot.save_current(
@@ -55,6 +70,7 @@ def main() -> None:
                 "momento": momento_cfg["titulo"],
                 "dolares": dolares,
                 "merval": merval,
+                "riesgo_pais": riesgo_pais,
                 "brecha_mep_oficial": brecha_mep_oficial,
             },
             anomalias=detectar_anomalias(dolares, merval),

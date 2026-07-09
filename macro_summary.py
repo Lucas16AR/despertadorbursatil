@@ -30,6 +30,7 @@ def _armar_prompt(
     merval: dict | None,
     brecha_mep_oficial: float,
     enfoque: str | None = None,
+    riesgo_pais: dict | None = None,
 ) -> str:
     lineas = []
     if enfoque:
@@ -40,6 +41,10 @@ def _armar_prompt(
         lineas.append(f"Dólar {info['nombre']}: venta ${info['venta']:.0f}")
     if merval is not None:
         lineas.append(f"MERVAL: {merval['valor']:.0f} ({merval['variacion_pct']:+.1f}%)")
+    if riesgo_pais is not None:
+        lineas.append(
+            f"Riesgo país: {riesgo_pais['valor']:.0f} pts ({riesgo_pais['variacion_pct']:+.1f}%)"
+        )
 
     lineas.append("")
     grupos = agrupar_titulares(titulares)
@@ -65,12 +70,13 @@ def generar_resumen_macro(
     merval: dict | None,
     brecha_mep_oficial: float,
     enfoque: str | None = None,
+    riesgo_pais: dict | None = None,
 ) -> str | None:
     """Devuelve el resumen de 2-4 oraciones, o None si falla la llamada a la API.
     `enfoque` es la instrucción del momento del día (pre-apertura, cierre, etc.) para
     que el resumen sea coherente con la tanda y no repita el mismo texto genérico."""
     client = anthropic.Anthropic()
-    prompt = _armar_prompt(titulares, dolares, merval, brecha_mep_oficial, enfoque)
+    prompt = _armar_prompt(titulares, dolares, merval, brecha_mep_oficial, enfoque, riesgo_pais)
     try:
         response = client.messages.create(
             model=MODEL,
