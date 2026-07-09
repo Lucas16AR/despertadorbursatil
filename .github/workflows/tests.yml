@@ -1,0 +1,25 @@
+name: Tests
+
+# Corre los tests unitarios en cada push/PR. Es un workflow separado del reporte diario a
+# propósito: un test fallido avisa (tilde roja en el commit) pero nunca bloquea los envíos
+# de producción, que siguen su propio cron.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Los tests actuales sólo usan stdlib, pero se instalan las deps para que los
+      # futuros tests puedan cubrir también los fetchers.
+      - run: pip install -r requirements.txt
+
+      - run: python -m unittest tests -v
