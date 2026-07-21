@@ -1,36 +1,36 @@
 {
-  "fecha": "2026-07-20",
+  "fecha": "2026-07-21",
   "dolares": {
     "oficial": {
       "nombre": "Oficial",
       "compra": 1450,
       "venta": 1500,
-      "fecha_origen": "2026-07-17T18:55:00.000Z"
+      "fecha_origen": "2026-07-20T18:55:00.000Z"
     },
     "blue": {
       "nombre": "Blue",
-      "compra": 1510,
-      "venta": 1530,
-      "fecha_origen": "2026-07-20T11:58:00.000Z"
+      "compra": 1520,
+      "venta": 1540,
+      "fecha_origen": "2026-07-21T11:51:00.000Z"
     },
     "bolsa": {
       "nombre": "MEP",
-      "compra": 1518.3,
-      "venta": 1521.9,
-      "fecha_origen": "2026-07-20T11:58:00.000Z"
+      "compra": 1510.4,
+      "venta": 1514.7,
+      "fecha_origen": "2026-07-21T11:51:00.000Z"
     },
     "contadoconliqui": {
       "nombre": "CCL",
-      "compra": 1572.1,
-      "venta": 1575.9,
-      "fecha_origen": "2026-07-20T11:58:00.000Z"
+      "compra": 1572.4,
+      "venta": 1572.9,
+      "fecha_origen": "2026-07-21T11:51:00.000Z"
     },
     "cripto": {
       "nombre": "Cripto",
-      "compra": 1568.19,
-      "venta": 1571.57,
-      "fecha_origen": "2026-07-20T11:58:00.000Z"
+      "compra": 1573.03,
+      "venta": 1575.64,
+      "fecha_origen": "2026-07-21T11:51:00.000Z"
     }
   },
-  "brecha_mep_oficial": 1.4600000000000062
+  "brecha_mep_oficial": 0.9800000000000031
 }
