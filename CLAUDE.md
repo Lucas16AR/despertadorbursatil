@@ -188,6 +188,118 @@ Hoy el dólar muestra flecha (🟢▲/🔴▼/➖) pero no un número de variaci
 
 **Con A-D, el sistema pasa de 4 a 6 mensajes diarios:** 8:00 (pre-apertura) → 11:00 (apertura) → 12:00 (lección educativa) → 17:15 (cierre, con variación del día completo) → 19:00 (efemérides AR + mundo) → 22:30 (panorama general del día, no solo mercados). Queda para Code definir si los dos mensajes nuevos (12:00 y 19:00) se generan con Claude (mismo patrón que el resumen macro) o con otro enfoque de contenido — no quedó especificado el mecanismo, solo el contenido y el horario.
 
+## Decimoséptima tarea — MERVAL fresco vía API de IOL (2026-07-11, requiere acción manual de Capi primero)
+
+Capi preguntó qué hacer con el MERVAL. Investigación de Cowork (2026-07-11): **confirmado que estadisticasbcra.com no es arreglable** — entré a su página pública (no solo la API) y el propio sitio muestra el mismo dato congelado del 30/08/2024 (`1714490`). No es una limitación del tier gratis ni un problema de nuestro fetch: la fuente dejó de actualizar esa serie hace casi 2 años, en el sitio entero.
+
+**Camino elegido por Capi: API de IOL (invertironline.com).** Es la fuente oficial/regulada, con cotizaciones en tiempo real del MERVAL y, a futuro, de acciones/CEDEARs/cauciones (ya estaba anotado como trámite pendiente en Notion desde el arranque del proyecto — esta tarea lo retoma con foco concreto en MERVAL).
+
+**Paso 1 — acción manual de Capi, no de Code:**
+1. Abrir una cuenta en IOL (gratis, sin costo de mantenimiento) si no tenés una — `https://www.invertironline.com`.
+2. Pedir acceso a la API desde la cuenta: sección de consultas, "Tipo de solicitud" = "Mi cuenta", "Razón de contacto" = "Api" (instrucciones en `https://www.invertironline.com/api`).
+3. Una vez aprobado, guardar las credenciales (usuario/contraseña o el mecanismo de auth que dé IOL — su API usa OAuth con usuario/clave de la cuenta, a confirmar en la documentación real `https://api.invertironline.com/`) como nuevo secret de GitHub Actions.
+
+**Paso 2 — para Code, recién cuando Capi confirme que el trámite está aprobado:**
+1. Revisar la documentación real de la API en `https://api.invertironline.com/` (autenticación, endpoint de cotización del índice MERVAL — probablemente bajo "Cotización de Título" con símbolo del índice, a confirmar).
+2. `merval.py` (reemplaza el uso de `bcra.py` para MERVAL, o convive si `bcra.py` sigue usándose para otra cosa del BCRA — revisar): `fetch_merval()` con la misma forma que hoy (`{valor, variacion_pct, fecha_origen}`) para no tener que tocar `formatter.py` más que lo mínimo.
+3. Mantener el mismo criterio de no bloqueante ya reforzado en la Undécima tarea (auditoría): si el fetch de IOL falla, el reporte sale igual sin esa línea.
+4. Si el token/sesión de IOL tiene expiración corta (a confirmar en la documentación), sumar el refresh como parte del fetch, no como paso manual repetido.
+
+**No implementar nada de código todavía** — esta tarea queda bloqueada hasta que Capi complete el paso 1. Mientras tanto, el MERVAL sigue mostrándose con `(al 30/08/2024)` como hasta ahora, honesto pero desactualizado.
+
+**Descartado en esta ronda:** un JSON público de Rava Bursátil (su web sí muestra el MERVAL actualizado al día, pero no hay una API pública documentada — mismo criterio ya aplicado a CNV/INDEC: sin API/RSS confirmado, no se scrapea).
+
+## Decimoquinta tarea — acreditar las fuentes de noticias en el mensaje (2026-07-11, para la próxima sesión)
+
+Cuarto ítem de la ronda. Este pendiente ya estaba anotado desde la Séptima tarea (PROGRESS.md, 2026-07-09: "el pie del mensaje sigue acreditando solo las fuentes de dato duro... si se quiere acreditarlas, es decisión de contenido") — **Capi confirma ahora: sí, sumarlas.**
+
+**Estado actual:** el pie del mensaje (`formatter.py`, línea ~244) dice `Fuente: dolarapi.com, estadisticasbcra.com, argentinadatos.com.` — solo las 3 fuentes de dato duro. Las 5 fuentes de noticias que alimentan "📰 Contexto macro" (`rss_news.FEEDS`: Ámbito, Infobae, El Cronista, La Nación, Bloomberg Línea) no aparecen acreditadas en ningún lado del mensaje.
+
+**Qué hacer:** sumar las fuentes de noticias al pie, distinguibles de las de dato duro para que no se lea como una lista plana de 8 nombres sin contexto — ej. dos líneas:
+```
+Datos: dolarapi.com, estadisticasbcra.com, argentinadatos.com.
+Noticias: Ámbito, Infobae, El Cronista, La Nación, Bloomberg Línea.
+```
+Tomar los nombres directamente de `rss_news.FEEDS.keys()` (no hardcodear la lista aparte, para que si se agrega/saca una fuente en el futuro el pie se actualice solo). Aplica a los 4 mensajes de datos; en lección educativa y efemérides no corresponde (no usan RSS).
+
+## Decimosexta tarea — investigar por qué los envíos no salen a horario exacto (2026-07-11, para la próxima sesión)
+
+Capi reportó que los mensajes no están saliendo en los horarios definidos (8:00, 11:00, 12:00, 17:15, 19:00, 22:30 ART).
+
+**Diagnóstico de Cowork (2026-07-11), a confirmar/profundizar con Code:** los 6 `cron` de `daily-report.yml` están bien mapeados a horario argentino (revisado uno por uno en la Undécima tarea), así que no parece un error de cálculo de horario. La causa más probable es una **limitación conocida de GitHub Actions, no un bug del código**: los `schedule` triggers de Actions son *best-effort* — GitHub explícitamente advierte que pueden demorarse en momentos de carga alta, y esa carga alta se concentra justo **en los minutos exactos de cada hora** (`:00`), que es exactamente donde caen 4 de los 6 cron actuales (`0 11`, `0 14`, `0 15`, `0 22`). Cuantos más workflows de todo el mundo estén programados para el mismo minuto redondo, más chance de cola y demora — a veces varios minutos, a veces más.
+
+**Qué hacer:**
+1. Confirmar el diagnóstico revisando el historial real de corridas en GitHub Actions (hora programada vs. hora real de inicio de cada run de las últimas corridas) — si el patrón de demora coincide con los minutos en punto, confirma la hipótesis.
+2. **Mitigación recomendada:** correr los cron unos minutos *desfasados* de la hora/cuarto exactos (ej. `3 11 * * *` en vez de `0 11 * * *`, `4 14 * * *`, `7 15 * * *`, `2 22 * * *`, manteniendo `15 20 * * *` y `30 1 * * *` que ya están desfasados) — reduce la probabilidad de quedar en la cola de carga pico, aunque no la elimina del todo (sigue siendo best-effort de la plataforma).
+3. Dejar documentado en `README.md` o en el pie del panel que los horarios son aproximados por una limitación de la plataforma de cron gratuita (GitHub Actions), no una garantía exacta al minuto — para que quede claro que no es indicativo de un bug si algún día sale con unos minutos de diferencia.
+4. Si la demora resulta ser sistemática y grande (no solo unos minutos), es una señal de que GitHub Actions no alcanza como scheduler para este nivel de precisión y habría que evaluar alternativas (ej. un cron externo tipo cron-job.org que dispare el workflow vía `workflow_dispatch`/repository_dispatch) — pero no implementar esto todavía, primero confirmar qué tan grave es la demora real.
+
+> **Decisión de Capi (2026-07-11):** avanzar solo con el desfasaje de minutos (punto 2) por ahora. La opción de cron externo (punto 4) queda documentada pero **no se implementa** — agrega una dependencia de terceros y un token de GitHub guardado fuera del repo, y no se justifica todavía sin antes medir si el desfasaje simple ya resuelve el problema. Si después de una semana con los cron desfasados la demora sigue siendo notoria, se retoma esa opción.
+
+## Decimotercera tarea — legibilidad del resumen de contexto macro (2026-07-11, para la próxima sesión)
+
+Segundo ítem de la ronda de mejoras que empezó la Duodécima tarea ("vamos uno a uno"). Capi pidió mejorar la legibilidad del bloque "📰 Contexto macro": hoy sale como un párrafo de 2-4 oraciones todo junto, sin ningún corte visual, y en el celular se lee como un bloque de texto pesado.
+
+**Causa:** `macro_summary.SYSTEM_PROMPT` le pide a Claude una "síntesis de 2 a 4 oraciones" en prosa corrida, sin ninguna instrucción de formato. `formatter.py` inserta ese texto tal cual después del header "📰 <b>Contexto macro</b>" (línea ~239) — no reformatea nada, así que el formato depende 100% de lo que devuelva el prompt.
+
+**Qué hacer:** cambiar `SYSTEM_PROMPT` (y `_armar_prompt` si hace falta más contexto) para que Claude devuelva el resumen en **puntos cortos separados por salto de línea**, no un párrafo corrido. Criterio sugerido:
+- 2 a 4 líneas, cada una una idea/tema distinto (ej. una línea de dólar/mercados, otra de la noticia más relevante del día, otra de algo político/macro si aplica) — no forzar 4 si con 2-3 alcanza.
+- Cada línea arranca con un bullet simple (`• `) para que se lea separado en Telegram (el mensaje ya usa `parse_mode=HTML`, así que un bullet de texto plano + `\n` entre líneas alcanza, no hace falta `<ul>/<li>`, Telegram no los soporta).
+- Frases cortas y directas, mismo tono rioplatense y mismas reglas de siempre (sin recomendaciones de inversión).
+- Verificar que el texto que devuelve Claude no rompa el parseo HTML del mensaje si por accidente incluye `<`, `>` o `&` (algún titular con esos caracteres) — si no hay un escape ya aplicado en el pipeline, sumarlo acá de paso.
+
+**Validar con datos reales** (mismo criterio que toda tarea anterior): correr `generar_resumen_macro` con titulares reales y confirmar que el mensaje final se ve bien en Telegram (líneas separadas, no un bloque).
+
+**No tocar en esta tarea:** el resto del mensaje (dólar, MERVAL, disclaimer) ni el criterio de qué se cuenta — solo el formato visual de este bloque puntual.
+
+> **Aclaración de Capi (2026-07-11), aplica también a esta tarea y a cualquier ajuste de formato futuro:** el objetivo es legibilidad, no recortar información. El resumen tiene que seguir siendo informativo y con contenido valioso — no vaciar el mensaje ni forzar brevedad artificial que corte algo real solo por entrar en menos líneas. Si un día hay más para contar, mejor 4 bullets bien informativos que 2 bullets vacíos de contenido.
+
+## Decimocuarta tarea — indicador de microeconomía: inflación mensual/interanual (2026-07-11, para la próxima sesión, viable ahora)
+
+Tercer ítem de la ronda de mejoras. Capi pidió sumar algo de microeconomía — datos que importen "en tiempos de crisis como el actual" — y preguntó si es viable ahora o si queda para más adelante. **Es viable ahora**, con la misma fuente que ya se usa para riesgo país.
+
+**Fuente confirmada (Cowork, 2026-07-11):** `argentinadatos.com`, gratis, sin key, mismo patrón que `riesgo_pais.py`.
+- `GET https://api.argentinadatos.com/v1/finanzas/indices/inflacion` → serie histórica mensual, `{"fecha": "2026-05-31", "valor": 2.1}` (variación % del mes, no acumulado).
+- `GET https://api.argentinadatos.com/v1/finanzas/indices/inflacion-interanual` → mismo formato, interanual.
+
+**Qué hacer:**
+1. `inflacion.py` (nuevo, mismo patrón que `riesgo_pais.py`): `fetch_inflacion()` → trae el último punto de cada serie (mensual + interanual), no bloqueante (si falla, el reporte sale igual).
+2. Sumar una línea a la sección "📊 Índices" (o una sección nueva "📉 Microeconomía" si Code considera que separa mejor el tema del resto de índices bursátiles — a criterio, no es una decisión de contenido sensible): `Inflación: 2.1% mensual / X% interanual (dato de mayo 2026)`. El INDEC publica con 1-2 semanas de rezago, así que casi siempre va a mostrar `(al dd/mm)` — es normal, mismo criterio de frescura relativa que el resto.
+3. Sumarlo también al prompt de `macro_summary.py` (`_armar_prompt`) como dato duro más, para que el resumen lo pueda mencionar cuando sea relevante.
+4. **No forzar la inflación en el resumen de cada tanda** — es un dato mensual, no diario, así que no cambia entre tandas del mismo día. Mostrarla igual en el bloque de datos (es información de contexto útil aunque no varíe hoy), pero no tiene sentido que la IA la repita como "novedad" en las 4 tandas de datos.
+
+**Otras ideas de microeconomía que Capi mencionó en términos generales pero que NO tienen fuente gratuita confirmada todavía — quedan para más adelante, no bloquean esta tarea:**
+- Canasta básica / línea de pobreza: INDEC no tiene API (ya se había descartado su RSS en la Séptima tarea, devuelve HTML) — requeriría scraping, fuera del criterio actual de fuentes.
+- Salario mínimo, vital y móvil: no encontrado en argentinadatos.com todavía — a revisar en la próxima ronda de revisión de fuentes (ver tarea programada quincenal `despertador-revision-fuentes-rss`).
+- UVA (índice usado para indexar alquileres y créditos hipotecarios) sí está disponible en argentinadatos.com (`GET /v1/finanzas/indices/uva`) — muy relevante en crisis para quien alquila o tiene un crédito UVA, pero es un tema aparte de la inflación general. Anotado como candidato a una futura tarea si Capi lo confirma, no se suma en esta.
+
+## Duodécima tarea — mejoras al mensaje tras los primeros días en producción (2026-07-11, para la próxima sesión)
+
+Capi lleva un par de días con el canal andando bien (mensajes, efemérides y lecciones saliendo sin problemas) y pide la primera ronda de ajustes de calidad, revisando el contenido real. Primer bloque de una serie ("vamos uno a uno") — esta sesión solo cubre lo de abajo, no anticipar el resto.
+
+**A. Mostrar las 7 cotizaciones del dólar que ofrece dolarapi.com, no solo 5.**
+Hoy `dolar.py` (`CASAS_RELEVANTES`) sólo trae oficial, blue, bolsa (MEP), contadoconliqui (CCL) y cripto. dolarapi.com (`GET https://dolarapi.com/v1/dolares`) devuelve 7 casas — faltan sumar:
+- `mayorista` → "Mayorista"
+- `tarjeta` → "Tarjeta"
+
+Orden sugerido para `ORDEN_CASAS` en `formatter.py` (agrupa lo más consultado primero, tarjeta al final por ser un recargo sobre el oficial, no una cotización de mercado): Oficial, Blue, MEP (bolsa), CCL (contadoconliqui), Mayorista, Cripto, Tarjeta.
+
+**B. Mostrar los centavos cuando la casa los tiene.**
+El formateo actual usa `:.0f` en `compra ${info['compra']:.0f} / venta ${info['venta']:.0f}` — trunca los decimales. dolarapi.com sí devuelve centavos en varias casas (ej. `bolsa: compra 1513.3`, `cripto: compra 1561.21`). Cambiar a mostrar 2 decimales cuando el valor no es entero, y sin decimales cuando sí lo es (para no mostrar "1460.00" en el oficial si viene redondo) — un helper tipo `_precio_texto(valor)` que decida el formato según si `valor == int(valor)`.
+
+**C. Sumar la leyenda de fuente/fecha de dolarapi.com al final de la sección de dólar.**
+Referencia exacta que dio Capi (texto real de dolarapi.com, hay que replicar el formato):
+```
+Datos obtenidos de DolarApi.com (https://dolarapi.com/)
+Actualizado el 11/07/2026 a las 17:59
+```
+Tomar el `fechaActualizacion` más reciente entre las 7 casas (ISO 8601 UTC), convertirlo a horario de Argentina y formatearlo `dd/mm/aaaa` + `HH:MM`. Esto es aparte del pie de "Fuente" que ya existe al final de todo el mensaje (dolarapi.com + estadisticasbcra.com + argentinadatos.com) — va específicamente después del bloque de cotizaciones de dólar, como referencia de frescura de esa fuente puntual.
+
+**D. MERVAL — mejorar la legibilidad del número grande.**
+Hoy `formatter.py` muestra `MERVAL: {valor:.0f}` sin separadores (ej. `1714487`). Capi pidió separarlo en miles para que se lea mejor (referencia visual: cómo Bull Market presenta sus cotizaciones — números grandes con separador de miles, formato argentino). Usar separador de miles con punto, formato argentino (`1.714.487`, no `1,714,487`) — un helper de formateo de miles compartido, reutilizable si en el futuro otro campo grande lo necesita (ej. si se suma un índice en pesos).
+
+**No tocar en esta tarea:** contenido/tono de los mensajes de efemérides o lección, horarios, ni ninguna de las tandas — es puramente presentación de datos.
+
 ## Undécima tarea — auditoría general del sistema (2026-07-09, para la próxima sesión, esfuerzo máximo)
 
 Capi tiene rango de sesión extendido y va a correr esta tarea con esfuerzo máximo. El objetivo NO es sumar features nuevas — es tomar el pulso real de todo lo construido hasta ahora (Primera a Décima tarea) y dejarlo más sólido antes de seguir escalando. Revisar, corregir lo que se pueda corregir con confianza, y dejar documentado lo que requiera una decisión de producto.
@@ -214,3 +326,70 @@ Capi tiene rango de sesión extendido y va a correr esta tarea con esfuerzo máx
 En la Novena tarea (parte C), Code dejó la brecha del dólar solo con flecha a propósito, porque su variación es en puntos porcentuales (pp) y no en % — mostrar "(+3%)" ahí sería confuso (se leería como variación relativa, no como el cambio real de la brecha). Capi confirmó: sumarlo igual, mostrando explícitamente la unidad correcta.
 
 **Qué hacer:** en `formatter.py`, agregar al renglón de la brecha la variación en pp (diferencia simple entre el valor actual y el de la tanda anterior, no un cálculo de %), con el sufijo "pp" para que quede claro que no es lo mismo que el resto de los campos. Ejemplo: `Brecha: 40% 🔴▲ (+3pp)`. No tocar la lógica de los demás campos (dólar, MERVAL, riesgo país), que siguen en %.
+
+## Decimoctava tarea — pivot de enfoque: de "reporte de mercado" a "central de noticias económicas" (2026-07-22, investigación de Cowork, para la próxima sesión)
+
+Capi planteó un cambio de fondo (no un ajuste chico): quiere que el canal cubra economía y finanzas en general, no solo mercado bursátil/cambiario. Lo de hoy (dólar, MERVAL, riesgo país + contexto macro con IA) está bien como base, pero es insuficiente para ese objetivo más amplio. Pidió avanzar en 3 ejes a la vez: más datos duros de economía real, más fuentes institucionales, y reestructurar el formato del mensaje para que economía general tenga su propio lugar (no sea un agregado pegado al reporte bursátil). Investigación hecha por Cowork el 2026-07-22, nada implementado todavía.
+
+**A. Fuentes institucionales — revisitado (última vez en la Séptima tarea, 2026-07-08).**
+
+- **BCRA: hay novedad real.** Desde entonces el BCRA lanzó un catálogo de APIs oficiales propio (`bcra.gob.ar/en/central-bank-api-catalog`), sin token, con 5 APIs: Estadísticas Cambiarias, Estadísticas Monetarias (v4, "incluye Informe Monetario Diario"), Cheques Denunciados, Central de Deudores, Régimen de Transparencia. Esto es distinto de `estadisticasbcra.com` (la fuente no oficial que ya sabemos que tiene el MERVAL congelado desde 2024) — es la fuente primaria del propio Banco Central. Útil para reservas internacionales, base monetaria, tasas de referencia (LELIQ/pases) — datos de economía real que hoy el canal no toca. **No resuelve el MERVAL** (no es un dato que publique el BCRA), pero abre una fuente confiable para todo lo demás de política monetaria. Documentación técnica: manual de desarrollo en PDF por cada API, linkeado desde esa misma página.
+- **CNV: sigue sin API/RSS de comunicados.** Solo catálogos estáticos en XLSX/JSON vía `argentina.gob.ar/cnv/transparencia/catalogos-de-datos-abiertos` (datos de transparencia institucional, no comunicados/noticias en tiempo real) — no sirve para un pipeline diario automatizado. Mismo resultado que la Séptima tarea: queda afuera.
+- **INDEC: no tiene RSS, pero hay una vía nueva no evaluada antes — la API Series de Tiempo de `datos.gob.ar`.** Es un servicio de la Jefatura de Gabinete (`argentina.gob.ar/datos-abiertos/api-series-de-tiempo`) que agrega más de 30.000 series de tiempo de organismos nacionales, incluido INDEC — IPC, comercio exterior, actividad económica (EMAE), entre otros. No es RSS de noticias, es consulta de series estructuradas (JSON/CSV) vía `apis.datos.gob.ar/series/api/series/?ids=<serie_id>`. **Falta el paso concreto que hicimos con dolarapi/argentinadatos en su momento:** identificar los IDs de series específicas que interesan (IPC nacional, EMAE, comercio exterior) y validarlas con una consulta real — no alcanza con saber que la API existe, hay que confirmar que trae lo que promete antes de construir nada.
+
+**B. Datos duros de economía real — más allá de lo ya anotado en la Decimocuarta tarea (inflación, sigue sin implementar).**
+
+Revisé el índice completo de `argentinadatos.com` (la misma fuente que ya usamos para riesgo país/UVA) — trae más de lo que el canal usa hoy:
+- **REM (Relevamiento de Expectativas de Mercado)** — encuesta del BCRA a analistas privados con proyecciones de inflación, tipo de cambio, tasa, PBI. Es información *prospectiva* (qué espera el mercado que pase), distinto de todo lo que el canal muestra hoy (que es todo retrospectivo/actual). Endpoint: `GET /v1/finanzas/rem` y `GET /v1/finanzas/rem/ultimo`. Encaja bien con el objetivo de "central de noticias" — es contenido genuinamente nuevo, no otro número de mercado.
+- **Tasas de plazo fijo, depósitos a 30 días, cuentas remuneradas en USD** — relevante para "qué hacer con los ahorros", ángulo de economía cotidiana que hoy el canal no toca (todo lo actual es de mercado/trading).
+- **Letras capitalizables (LECAP/BONCAP)** — más específico de mercado, no suma al objetivo de "economía general", queda para más adelante si se prioriza el ángulo inversor.
+- **No hay salario mínimo, vital y móvil ni canasta básica en argentinadatos.com** (se había anotado en la Decimocuarta tarea como pendiente de fuente) — quedan sin resolver todavía; la API Series de Tiempo de datos.gob.ar (punto A) es el próximo lugar a revisar para esto, no confirmado aún.
+- La Decimocuarta tarea (inflación mensual/interanual, viable con la misma fuente) **sigue sin implementarse** — es el punto de partida más directo y ya especificado, antes de sumar REM o tasas.
+
+**C. Propuesta de reestructuración del mensaje — separar "Mercado" de "Economía".**
+
+Hoy la estructura es: 💵 Dólar → 📊 Índices (MERVAL + riesgo país) → 📰 Contexto macro (síntesis de noticias con IA) → Fuente → Disclaimer. Todo lo que no es "Contexto macro" es mercado/cambiario — no hay una sección de datos duros de economía real, y por eso agregar inflación o REM ahí adentro se sentiría forzado.
+
+Propuesta (a confirmar con Capi antes de que Code la implemente): sumar una sección nueva entre "📊 Índices" y "📰 Contexto macro", con nombre tentativo **"📈 Economía"** (o "📉 Indicadores", a definir el tono), que agrupe los datos duros no bursátiles: inflación (Decimocuarta tarea), REM cuando esté listo, y más adelante lo que salga de la API de BCRA/series de tiempo. Mantiene el mismo criterio de frescura relativa y no bloqueante que ya usa todo el resto del mensaje — si no hay dato nuevo ese día (ej. inflación es mensual), no se repite como "novedad" en cada tanda, mismo criterio ya establecido en la Decimocuarta tarea. El "Contexto macro" (síntesis de noticias con IA) queda como está, como cierre narrativo — pero al tener más datos duros de economía real disponibles, el prompt de `macro_summary.py` los puede citar con más precisión en vez de depender solo de lo que mencionen los titulares de RSS.
+
+**Orden sugerido para la próxima sesión (a confirmar con Capi, no bloquea nada de lo que ya funciona):**
+1. Cerrar la Decimocuarta tarea (inflación) — ya especificada, es la base de la sección nueva.
+2. Sumar la sección "📈 Economía" en `formatter.py` con inflación adentro (aunque sea con un solo dato al principio).
+3. Sumar REM (`rem.py`, mismo patrón que `riesgo_pais.py`/`inflacion.py`) a esa sección.
+4. Validar concretamente los IDs de series de INDEC en la API de `datos.gob.ar` (con `curl`, mismo criterio que se usó para validar los RSS) antes de prometer nada de esa fuente.
+5. Revisar la API oficial del BCRA (punto A) para reemplazar o complementar el uso de `estadisticasbcra.com`, empezando por reservas/tasas de referencia — no por el MERVAL, que sigue bloqueado en la Decimoséptima tarea (IOL).
+
+**No tocar en esta ronda:** nada de lo que ya funciona (6 tandas, disclaimer, panel, Telegram) — este es un plan de ampliación de contenido, no un rediseño del sistema de envíos.
+
+## Decimonovena tarea — fuentes del exterior (2026-07-22, investigación de Cowork, para la próxima sesión)
+
+Capi pidió, antes de pasarle nada a Code, sumar a la investigación de la Decimoctava tarea fuentes de afuera de Argentina — la economía real del país está atada al contexto global (commodities, Fed, Brasil), y hoy el canal no tiene ningún dato duro de eso, solo lo que se cuela en el resumen de IA si algún titular local lo menciona.
+
+**A. Commodities agrícolas (soja/maíz/trigo) — relevante porque son el principal ingreso de dólares del país.**
+No encontré una API pública gratuita y sin registro con el mismo patrón de bajo esfuerzo que dolarapi.com. La fuente más seria es la **API de Índices MtR de A3 Mercados/MATba-Rofex** (`matbarofex.com.ar/Indices-mtr/documentacion`) — I.SOJA, I.MAIZ, I.TRIGO — pero es vía WebSocket y probablemente requiere registro/autorización, no confirmado como abierta sin trámite. Alternativas de solo lectura web (PrecioGrano.com.ar, Agrofy News, Rosario Finanzas) no tienen API documentada, solo páginas — requerirían scraping, mismo criterio que ya descartó a INDEC/CNV en la Séptima tarea. **Queda sin resolver**, es el hueco más grande de esta ronda porque es el commodity más relevante para Argentina.
+
+**B. Índices de Wall Street (S&P 500, Dow Jones, Nasdaq) — relevante porque la tanda de las 22:30 ya menciona "Wall Street cerrado" en el resumen de IA, pero sin ningún dato duro propio.**
+No hay una API 100% gratuita y sin key con buen límite diario. Dos caminos viables, ninguno ideal:
+- **Stooq.com**: descarga CSV sin key, pero con límite diario bajo no documentado con precisión ("Exceeded the daily hits limit" reportado por otros usuarios) — con 1 consulta/día (una tanda) probablemente alcanza, pero no está garantizado.
+- **Alpha Vantage** (u otro proveedor con free tier tipo Twelve Data): requiere key gratis, límites de pocas decenas de consultas/día — sobra para 1 consulta diaria. Mismo patrón que ya se usa con `BCRA_API_TOKEN`/`ANTHROPIC_API_KEY` (registro + secret de Actions).
+Ninguna de las dos es "gratis sin key" como dolarapi.com; si se prioriza este dato, la vía más simple es Alpha Vantage con key gratuita.
+
+**C. FRED (Federal Reserve Economic Data, EE.UU.) — la más sólida de todas las nuevas.**
+API oficial de la Reserva Federal de St. Louis, gratis, requiere key gratuita (alta inmediata, sin trámite largo — `fredaccount.stlouisfed.org/apikeys`), **800.000+ series** de EE.UU.: inflación, tasa de la Fed, PBI, empleo. Es el dato macro global con más impacto indirecto sobre Argentina (suba de tasa de la Fed = presión sobre emergentes) y hoy no está en el canal en ningún formato, ni siquiera vía noticias. Mismo patrón de key gratuita que Alpha Vantage.
+
+**D. Brasil — no estaba en el radar de rondas anteriores, y es el principal socio comercial de Argentina.**
+El Banco Central de Brasil tiene un **portal de datos abiertos propio, gratis, sin key** (`dadosabertos.bcb.gov.br`), con Swagger documentado: cotización del dólar (PTAX, histórico desde 1984) y datos de la tasa Selic. Mismo nivel de calidad/confiabilidad que la nueva API oficial del BCRA argentino (punto A de la Decimoctava tarea). Un Real competitivo/débil frente al dólar afecta directamente la competitividad de las exportaciones argentinas a Brasil — dato con lectura económica real, no solo curiosidad.
+
+**E. World Bank / IMF — sirven para contenido de fondo, no para el reporte diario.**
+Ambas son gratis y sin key (`api.worldbank.org/v2/...`, IMF World Economic Outlook), pero los datos son anuales o de baja frecuencia (PBI, pobreza, proyecciones a 5 años) — no tiene sentido consultarlas en una tanda diaria porque el valor no cambia día a día. Mejor encaje: alimentar contenido ocasional (ej. la lección educativa de las 12:00, o un futuro "resumen semanal/mensual" ya anotado como idea en la Octava tarea) en vez de una sección de datos diarios.
+
+**F. Petróleo (WTI/Brent) — relevante para Vaca Muerta y la balanza energética.**
+Sin opción gratuita sin key. La más accesible es OilPriceAPI, con key gratuita y 100 consultas/mes en el free tier — de sobra para 1 consulta/día (30/mes). Mismo patrón que Alpha Vantage/FRED: registro simple, no es un trámite largo como IOL.
+
+**Resumen para decidir prioridad (a confirmar con Capi antes de pasarle nada a Code):**
+- **Gratis y sin key, mismo nivel de fricción que lo que ya existe:** Brasil (BCB) — el más directo de sumar.
+- **Gratis pero con key de alta inmediata (mismo patrón que ANTHROPIC_API_KEY):** FRED (el más valioso de este grupo), Alpha Vantage/Wall Street, OilPriceAPI.
+- **Sin resolver, requiere más investigación o trámite:** commodities agro (el más importante para Argentina, pero el más difícil de conseguir gratis).
+- **No aplican al reporte diario, sí a contenido ocasional:** World Bank, IMF.
+
+**No implementar nada todavía** — mismo criterio que la Decimoctava tarea, esto queda para que Capi decida qué priorizar antes de pasarlo a Code. Ninguna fuente nueva reemplaza nada de lo que ya funciona.
