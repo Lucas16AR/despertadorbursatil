@@ -12,7 +12,10 @@ from datetime import date
 from agrupador import agrupar_titulares
 from formatter import (
     DISCLAIMER,
+    _fecha_mes_anio,
     _fecha_origen_a_fecha,
+    _miles,
+    _precio_texto,
     _sufijo_frescura,
     _variacion_brecha_texto,
     _variacion_texto,
@@ -64,6 +67,28 @@ class TestSufijoFrescura(unittest.TestCase):
     def test_sin_fecha_o_sin_referencia(self):
         self.assertEqual(_sufijo_frescura(None, date(2026, 7, 9)), "")
         self.assertEqual(_sufijo_frescura("2026-07-09", None), "")
+
+
+class TestPrecioYMiles(unittest.TestCase):
+    def test_precio_entero_sin_decimales(self):
+        self.assertEqual(_precio_texto(1460.0), "1460")
+
+    def test_precio_con_centavos(self):
+        self.assertEqual(_precio_texto(1513.3), "1513.30")
+        self.assertEqual(_precio_texto(1561.21), "1561.21")
+
+    def test_miles_separador_argentino(self):
+        self.assertEqual(_miles(1714487.0), "1.714.487")
+        self.assertEqual(_miles(999.0), "999")
+
+
+class TestFechaMesAnio(unittest.TestCase):
+    def test_formatea_mes_en_espanol(self):
+        self.assertEqual(_fecha_mes_anio("2026-05-31"), "mayo 2026")
+
+    def test_sin_fecha(self):
+        self.assertEqual(_fecha_mes_anio(None), "")
+        self.assertEqual(_fecha_mes_anio("no es una fecha"), "")
 
 
 class TestVariaciones(unittest.TestCase):
@@ -148,6 +173,56 @@ class TestArmarMensaje(unittest.TestCase):
         self.assertIn("(-0.7%)", linea)
         self.assertNotIn("🔴", linea)
         self.assertNotIn("🟢", linea)
+
+    def test_leyenda_dolarapi_toma_la_fecha_mas_reciente(self):
+        dolares = _dolares(fecha="2026-07-11T20:59:00.000Z")
+        msg = armar_mensaje(dolares, None, None)
+        self.assertIn("Datos obtenidos de DolarApi.com (https://dolarapi.com/)", msg)
+        self.assertIn("Actualizado el 11/07/2026 a las 17:59", msg)
+
+    def test_inflacion_mensual_e_interanual(self):
+        inflacion = {
+            "mensual": {"valor": 2.1, "fecha_origen": "2026-05-31"},
+            "interanual": {"valor": 45.3, "fecha_origen": "2026-05-31"},
+        }
+        msg = armar_mensaje(_dolares(), None, None, inflacion=inflacion)
+        linea = next(l for l in msg.split("\n") if l.startswith("Inflación"))
+        self.assertEqual(linea, "Inflación: 2.1% mensual / 45.3% interanual (dato de mayo 2026)")
+
+    def test_inflacion_solo_una_serie_disponible(self):
+        inflacion = {"mensual": {"valor": 2.1, "fecha_origen": "2026-05-31"}, "interanual": None}
+        msg = armar_mensaje(_dolares(), None, None, inflacion=inflacion)
+        linea = next(l for l in msg.split("\n") if l.startswith("Inflación"))
+        self.assertEqual(linea, "Inflación: 2.1% mensual (dato de mayo 2026)")
+
+    def test_sin_inflacion_no_aparece_la_linea(self):
+        msg = armar_mensaje(_dolares(), None, None)
+        self.assertNotIn("Inflación", msg)
+
+    def test_pie_con_fuentes_de_noticias(self):
+        msg = armar_mensaje(_dolares(), None, None, fuentes_noticias=["Ámbito", "Infobae"])
+        self.assertIn("<i>Noticias: Ámbito, Infobae.</i>", msg)
+        self.assertIn("<i>Datos: dolarapi.com, estadisticasbcra.com, argentinadatos.com.</i>", msg)
+
+    def test_pie_sin_fuentes_de_noticias_omite_la_linea(self):
+        msg = armar_mensaje(_dolares(), None, None)
+        self.assertNotIn("Noticias:", msg)
+
+    def test_dolar_mayorista_y_tarjeta_con_centavos(self):
+        dolares = _dolares()
+        dolares["mayorista"] = {
+            "nombre": "Mayorista", "compra": 1440.0, "venta": 1445.5, "fecha_origen": dolares["oficial"]["fecha_origen"]
+        }
+        dolares["tarjeta"] = {
+            "nombre": "Tarjeta", "compra": 1900.0, "venta": 1963.0, "fecha_origen": dolares["oficial"]["fecha_origen"]
+        }
+        msg = armar_mensaje(dolares, None, None)
+        self.assertIn("Mayorista: compra $1440 / venta $1445.50", msg)
+        self.assertIn("Tarjeta: compra $1900 / venta $1963", msg)
+        # Mayorista antes que Cripto, Cripto antes que Tarjeta (ORDEN_CASAS).
+        pos = {l.split(":")[0]: i for i, l in enumerate(msg.split("\n"))}
+        self.assertLess(pos["Mayorista"], pos["Cripto"])
+        self.assertLess(pos["Cripto"], pos["Tarjeta"])
 
 
 class TestDetectarAnomalias(unittest.TestCase):

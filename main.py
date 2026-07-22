@@ -14,11 +14,12 @@ from bcra import fetch_merval
 from dolar import fetch_dolares
 from efemerides import generar_efemerides
 from formatter import ARG_TZ, armar_mensaje, calcular_brecha_mep_oficial, detectar_anomalias
+from inflacion import fetch_inflacion
 from leccion_educativa import generar_leccion
 from macro_summary import generar_resumen_macro
 from momento import obtener_momento
 from riesgo_pais import fetch_riesgo_pais
-from rss_news import fetch_titulares
+from rss_news import FEEDS, fetch_titulares
 from telegram_client import enviar_mensaje
 
 
@@ -76,6 +77,14 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
     except Exception as error:
         print(f"No se pudo obtener el riesgo país (no bloqueante): {error}")
 
+    # Inflación: dato mensual (argentinadatos.com/INDEC), no bloqueante — si falla, el reporte
+    # sale igual sin esa línea.
+    inflacion = None
+    try:
+        inflacion = fetch_inflacion()
+    except Exception as error:
+        print(f"No se pudo obtener la inflación (no bloqueante): {error}")
+
     resumen_macro = None
     try:
         titulares = fetch_titulares()
@@ -86,6 +95,7 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
             brecha_mep_oficial,
             enfoque=momento_cfg["enfoque_macro"],
             riesgo_pais=riesgo_pais,
+            inflacion=inflacion,
         )
     except Exception as error:
         print(f"No se pudo generar el resumen macro (no bloqueante): {error}")
@@ -98,6 +108,8 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
         momento=momento_cfg,
         riesgo_pais=riesgo_pais,
         snapshot_inicio_dia=snapshot_inicio_dia,
+        inflacion=inflacion,
+        fuentes_noticias=list(FEEDS.keys()),
     )
     enviar_mensaje(mensaje)
 
@@ -110,6 +122,7 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
             "dolares": dolares,
             "merval": merval,
             "riesgo_pais": riesgo_pais,
+            "inflacion": inflacion,
             "brecha_mep_oficial": brecha_mep_oficial,
         },
         anomalias=detectar_anomalias(dolares, merval),

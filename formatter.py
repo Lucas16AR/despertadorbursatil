@@ -6,7 +6,12 @@ from datetime import date, datetime, timedelta, timezone
 
 FECHA_FORMATO = "%d/%m/%Y"
 
-ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui", "cripto"]
+ORDEN_CASAS = ["oficial", "blue", "bolsa", "contadoconliqui", "mayorista", "cripto", "tarjeta"]
+
+MESES_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
 
 # Argentina no aplica horario de verano: siempre UTC-3.
 ARG_TZ = timezone(timedelta(hours=-3))
@@ -67,6 +72,44 @@ def _variacion_brecha_texto(variacion_pp: float | None) -> str:
     else:
         flecha = " ➖"
     return f"{flecha} ({variacion_pp:+.1f}pp)"
+
+
+def _precio_texto(valor: float) -> str:
+    """2 decimales cuando la casa los tiene (dolarapi.com trae centavos en varias, ej. bolsa,
+    cripto), sin decimales cuando el valor es entero — para no mostrar '1460.00' en el oficial."""
+    if valor == int(valor):
+        return f"{valor:.0f}"
+    return f"{valor:.2f}"
+
+
+def _miles(valor: float) -> str:
+    """Separador de miles en formato argentino (punto), ej. 1714487 -> '1.714.487'."""
+    return f"{valor:,.0f}".replace(",", ".")
+
+
+def _fecha_origen_a_datetime(fecha_origen: str | None) -> datetime | None:
+    """Como `_fecha_origen_a_fecha` pero conserva la hora, en horario de Argentina — la usa la
+    leyenda de dolarapi.com para mostrar el momento exacto de la última actualización, no sólo
+    el día. Sólo aplica a fechas con hora (ISO 8601 con 'T'); series de solo fecha no tienen hora
+    que mostrar."""
+    if not fecha_origen or "T" not in fecha_origen:
+        return None
+    try:
+        dt = datetime.fromisoformat(fecha_origen.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(ARG_TZ)
+
+
+def _fecha_mes_anio(fecha_origen: str | None) -> str:
+    """Formato 'mes año' en español (ej. 'mayo 2026'), para datos mensuales como la inflación
+    donde mostrar dd/mm no tiene sentido — se referencia el mes que mide el dato, no un día."""
+    fecha = _fecha_origen_a_fecha(fecha_origen)
+    if fecha is None:
+        return ""
+    return f"{MESES_ES[fecha.month - 1]} {fecha.year}"
 
 
 def _fecha_origen_a_fecha(fecha_origen: str | None) -> date | None:
@@ -163,6 +206,8 @@ def armar_mensaje(
     momento: dict | None = None,
     riesgo_pais: dict | None = None,
     snapshot_inicio_dia: dict | None = None,
+    inflacion: dict | None = None,
+    fuentes_noticias: list[str] | None = None,
 ) -> str:
     referencia = _fecha_referencia(dolares)
     hoy = snapshot_anterior or {}
@@ -207,17 +252,32 @@ def armar_mensaje(
             variacion_dia = (info["venta"] - inicio["venta"]) / inicio["venta"] * 100
             extra_dia = f" · día {variacion_dia:+.1f}%"
         lineas.append(
-            f"{info['nombre']}: compra ${info['compra']:.0f} / venta ${info['venta']:.0f}{sufijo}{_variacion_texto(variacion)}{extra_dia}"
+            f"{info['nombre']}: compra ${_precio_texto(info['compra'])} / venta ${_precio_texto(info['venta'])}{sufijo}{_variacion_texto(variacion)}{extra_dia}"
         )
+
+    # Leyenda de frescura de dolarapi.com (Duodécima tarea): la fecha/hora más reciente entre
+    # las 7 casas, tal como la muestra la propia dolarapi.com — referencia de esa fuente puntual,
+    # aparte del pie de "Datos" que cierra todo el mensaje.
+    ultima_actualizacion = None
+    for info in dolares.values():
+        dt = _fecha_origen_a_datetime(info.get("fecha_origen"))
+        if dt is not None and (ultima_actualizacion is None or dt > ultima_actualizacion):
+            ultima_actualizacion = dt
+    if ultima_actualizacion is not None:
+        lineas += [
+            "<i>Datos obtenidos de DolarApi.com (https://dolarapi.com/)</i>",
+            f"<i>Actualizado el {ultima_actualizacion.strftime('%d/%m/%Y')} a las "
+            f"{ultima_actualizacion.strftime('%H:%M')}</i>",
+        ]
 
     lineas_indices = []
     if merval is not None:
         sufijo_merval = _sufijo_frescura(merval.get("fecha_origen"), referencia)
         if sufijo_merval:
-            lineas_indices.append(f"MERVAL: {merval['valor']:.0f}{sufijo_merval}")
+            lineas_indices.append(f"MERVAL: {_miles(merval['valor'])}{sufijo_merval}")
         else:
             lineas_indices.append(
-                f"MERVAL: {merval['valor']:.0f}{_flecha(merval['variacion_pct'])} "
+                f"MERVAL: {_miles(merval['valor'])}{_flecha(merval['variacion_pct'])} "
                 f"({merval['variacion_pct']:+.1f}%)"
             )
     if riesgo_pais is not None:
@@ -229,6 +289,22 @@ def armar_mensaje(
             f"Riesgo país: {riesgo_pais['valor']:.0f} pts "
             f"({riesgo_pais['variacion_pct']:+.1f}%){sufijo_rp}"
         )
+    if inflacion is not None:
+        # Dato mensual (INDEC vía argentinadatos.com, publicado con lag): no se compara contra
+        # la tanda anterior como el resto de los campos, sólo se muestra el último valor conocido
+        # con el mes que mide — no tiene sentido marcarlo como "novedad" en cada tanda del día.
+        mensual = inflacion.get("mensual")
+        interanual = inflacion.get("interanual")
+        partes = []
+        if mensual is not None:
+            partes.append(f"{mensual['valor']:.1f}% mensual")
+        if interanual is not None:
+            partes.append(f"{interanual['valor']:.1f}% interanual")
+        if partes:
+            fecha_ref = (mensual or interanual)["fecha_origen"]
+            mes_texto = _fecha_mes_anio(fecha_ref)
+            etiqueta = f" (dato de {mes_texto})" if mes_texto else ""
+            lineas_indices.append(f"Inflación: {' / '.join(partes)}{etiqueta}")
     if lineas_indices:
         lineas += ["", "📊 <b>Índices</b>", *lineas_indices]
 
@@ -239,11 +315,9 @@ def armar_mensaje(
             resumen_macro,
         ]
 
-    lineas += [
-        "",
-        "<i>Fuente: dolarapi.com, estadisticasbcra.com, argentinadatos.com.</i>",
-        "",
-        DISCLAIMER,
-    ]
+    lineas += ["", "<i>Datos: dolarapi.com, estadisticasbcra.com, argentinadatos.com.</i>"]
+    if fuentes_noticias:
+        lineas.append(f"<i>Noticias: {', '.join(fuentes_noticias)}.</i>")
+    lineas += ["", DISCLAIMER]
 
     return "\n".join(lineas)

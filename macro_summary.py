@@ -3,6 +3,8 @@
 instrucciones de inversión, coherente con no tener sección de recomendaciones."""
 from __future__ import annotations
 
+import html
+
 import anthropic
 
 from agrupador import agrupar_titulares
@@ -17,10 +19,16 @@ MAX_GRUPOS_PROMPT = 20
 SYSTEM_PROMPT = (
     "Sos un analista que redacta un resumen macro diario para un reporte de "
     "mercados argentino. Con los titulares de noticias y los datos duros que te "
-    "pasan, escribí una síntesis de 2 a 4 oraciones en español rioplatense, "
-    "neutral y directa. Nunca dés recomendaciones de inversión ni instrucciones "
-    "de compra/venta de ningún instrumento — solo describí el contexto. Si los "
-    "titulares no tienen nada relevante, basate solo en los datos duros."
+    "pasan, escribí una síntesis de 2 a 4 puntos (no fuerces 4 si con 2-3 alcanza), "
+    "cada uno una idea o tema distinto, en español rioplatense, neutral y directo. "
+    "Cada punto es UNA sola oración corta (máximo ~25 palabras) — nunca un párrafo "
+    "ni varias oraciones — y va en su propia línea, empezando con '• '. No repitas "
+    "entre puntos un dato que ya diste en otro. Nunca dés recomendaciones de "
+    "inversión ni instrucciones de compra/venta de ningún instrumento — solo "
+    "describí el contexto. Si los titulares no tienen nada relevante, basate solo "
+    "en los datos duros. El objetivo es legibilidad, no recortar información: "
+    "priorizá los datos/eventos más importantes del día, cada uno en una línea "
+    "breve y concreta, en vez de desarrollarlos en extenso."
 )
 
 
@@ -31,6 +39,7 @@ def _armar_prompt(
     brecha_mep_oficial: float | None,
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
+    inflacion: dict | None = None,
 ) -> str:
     lineas = []
     if enfoque:
@@ -46,6 +55,16 @@ def _armar_prompt(
         lineas.append(
             f"Riesgo país: {riesgo_pais['valor']:.0f} pts ({riesgo_pais['variacion_pct']:+.1f}%)"
         )
+    if inflacion is not None:
+        mensual = inflacion.get("mensual")
+        interanual = inflacion.get("interanual")
+        partes = []
+        if mensual is not None:
+            partes.append(f"{mensual['valor']:.1f}% mensual")
+        if interanual is not None:
+            partes.append(f"{interanual['valor']:.1f}% interanual")
+        if partes:
+            lineas.append(f"Inflación: {' / '.join(partes)}")
 
     lineas.append("")
     grupos = agrupar_titulares(titulares)
@@ -72,12 +91,15 @@ def generar_resumen_macro(
     brecha_mep_oficial: float | None,
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
+    inflacion: dict | None = None,
 ) -> str | None:
-    """Devuelve el resumen de 2-4 oraciones, o None si falla la llamada a la API.
+    """Devuelve el resumen en bullets cortos (2-4 líneas), o None si falla la llamada a la API.
     `enfoque` es la instrucción del momento del día (pre-apertura, cierre, etc.) para
     que el resumen sea coherente con la tanda y no repita el mismo texto genérico."""
     client = anthropic.Anthropic()
-    prompt = _armar_prompt(titulares, dolares, merval, brecha_mep_oficial, enfoque, riesgo_pais)
+    prompt = _armar_prompt(
+        titulares, dolares, merval, brecha_mep_oficial, enfoque, riesgo_pais, inflacion
+    )
     try:
         response = client.messages.create(
             model=MODEL,
@@ -88,4 +110,12 @@ def generar_resumen_macro(
     except anthropic.APIError as error:
         print(f"Claude API falló al generar el resumen macro: {error}")
         return None
-    return next((block.text for block in response.content if block.type == "text"), None)
+    texto = next((block.text for block in response.content if block.type == "text"), None)
+    if texto is None:
+        return None
+    # El mensaje se manda con parse_mode=HTML: si algún titular trae '<', '>' o '&' y Claude lo
+    # reproduce tal cual, rompería el parseo de Telegram y tiraría abajo el envío entero. Se
+    # escapa acá, antes de insertar el texto en el mensaje armado por formatter.py. quote=False:
+    # Telegram sólo exige escapar '&', '<' y '>' en el texto — escapar comillas de más (ej.
+    # "Moody's" -> "Moody&#x27;s") ensucia el mensaje sin necesidad.
+    return html.escape(texto.strip(), quote=False)

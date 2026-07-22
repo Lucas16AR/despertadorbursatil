@@ -5,12 +5,18 @@ on:
     # Horarios en UTC (Argentina es UTC-3, sin horario de verano). Las 4 tandas de datos están
     # ancladas a la rueda real de BYMA (10:30–17:00 ART) más una nocturna; los 2 mensajes de
     # contenido (lección, efemérides) intercalados. En total, 6 mensajes por día.
-    - cron: "0 11 * * *"    # 08:00 ART — pre-apertura (datos)
-    - cron: "0 14 * * *"    # 11:00 ART — apertura (datos)
-    - cron: "0 15 * * *"    # 12:00 ART — lección educativa (contenido)
-    - cron: "15 20 * * *"   # 17:15 ART — cierre (datos)
-    - cron: "0 22 * * *"    # 19:00 ART — efemérides (contenido)
-    - cron: "30 1 * * *"    # 22:30 ART (01:30 UTC del día siguiente) — panorama del día (datos)
+    # Desfasados unos minutos de la hora/cuarto exacto (Decimosexta tarea, 2026-07-11): GitHub
+    # Actions advierte que los `schedule` triggers son best-effort y que la demora se concentra
+    # justo en los minutos redondos (:00), por la cantidad de workflows de todo el mundo
+    # programados ahí. Correr unos minutos después reduce la chance de quedar en esa cola. Los
+    # horarios reales pueden variar unos minutos por esta misma razón — no es un bug si un envío
+    # sale un poco después de lo programado.
+    - cron: "3 11 * * *"    # 08:00 ART — pre-apertura (datos)
+    - cron: "4 14 * * *"    # 11:00 ART — apertura (datos)
+    - cron: "7 15 * * *"    # 12:00 ART — lección educativa (contenido)
+    - cron: "15 20 * * *"   # 17:15 ART — cierre (datos, ya desfasado)
+    - cron: "2 22 * * *"    # 19:00 ART — efemérides (contenido)
+    - cron: "30 1 * * *"    # 22:30 ART (01:30 UTC del día siguiente) — panorama del día (datos, ya desfasado)
   workflow_dispatch:
     inputs:
       momento:
@@ -55,11 +61,11 @@ jobs:
           INPUT_MOMENTO: ${{ github.event.inputs.momento }}
         run: |
           case "$SCHEDULE" in
-            "0 11 * * *")   MOMENTO="pre_apertura" ;;
-            "0 14 * * *")   MOMENTO="apertura" ;;
-            "0 15 * * *")   MOMENTO="leccion_educativa" ;;
+            "3 11 * * *")   MOMENTO="pre_apertura" ;;
+            "4 14 * * *")   MOMENTO="apertura" ;;
+            "7 15 * * *")   MOMENTO="leccion_educativa" ;;
             "15 20 * * *")  MOMENTO="cierre" ;;
-            "0 22 * * *")   MOMENTO="efemerides" ;;
+            "2 22 * * *")   MOMENTO="efemerides" ;;
             "30 1 * * *")   MOMENTO="cierre_global" ;;
             *)              MOMENTO="${INPUT_MOMENTO:-pre_apertura}" ;;
           esac

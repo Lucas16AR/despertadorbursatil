@@ -1,5 +1,70 @@
 # PROGRESS.md
 
+## 2026-07-22 — Duodécima, Decimotercera, Decimocuarta, Decimoquinta y Decimosexta tarea
+
+Ronda de 5 tareas ya especificadas en sesiones anteriores de Cowork, todas validadas con datos
+reales antes de commitear (fetch real de dolarapi.com/argentinadatos.com, corrida real de
+`generar_resumen_macro` contra Claude Haiku con titulares reales, sin enviar nada a Telegram).
+40 tests unitarios pasan (28 previos + 12 nuevos).
+
+**Duodécima tarea — 4 mejoras al mensaje:**
+1. `dolar.py`: sumadas `mayorista` y `tarjeta` a `CASAS_RELEVANTES` (dolarapi.com trae 7 casas,
+   antes se mostraban 5). `ORDEN_CASAS` en `formatter.py` actualizado: Oficial, Blue, MEP, CCL,
+   Mayorista, Cripto, Tarjeta.
+2. `_precio_texto()` (nuevo helper en `formatter.py`): 2 decimales cuando la casa los tiene (ej.
+   MEP `$1506.40`), sin decimales cuando el valor es entero (ej. Oficial `$1500`).
+3. Leyenda de frescura de dolarapi.com (`Datos obtenidos de DolarApi.com... / Actualizado el
+   dd/mm/aaaa a las HH:MM`) agregada después del bloque de cotizaciones — toma la fecha/hora más
+   reciente entre las 7 casas, convertida a horario de Argentina.
+4. `_miles()` (nuevo helper): separador de miles en formato argentino (punto). MERVAL ahora se
+   muestra `1.714.487` en vez de `1714487`.
+
+**Decimotercera tarea — legibilidad del resumen de contexto macro:**
+`SYSTEM_PROMPT` de `macro_summary.py` reescrito para pedir 2-4 puntos cortos (una sola oración
+cada uno, prefijo `• `), no un párrafo corrido. Primera corrida con datos reales dio 3 párrafos
+largos con bullet pegado — no era lo pedido; se ajustó el prompt para exigir explícitamente "UNA
+sola oración corta (máximo ~25 palabras) — nunca un párrafo" y una segunda corrida confirmó
+bullets realmente cortos, uno por idea, sin perder contenido (mismo criterio de "legibilidad, no
+recortar información" que pidió Capi). De paso, se sumó `html.escape(texto, quote=False)` al
+texto que devuelve Claude antes de insertarlo en el mensaje HTML — sin esto, un titular con `<`,
+`>` o `&` podría romper el parseo de Telegram y tirar abajo el envío completo. `quote=False`
+porque Telegram sólo exige escapar `&`/`<`/`>`; con `quote=True` (default de `html.escape`)
+apóstrofes como en "Moody's" salían literalmente como `Moody&#x27;s` en el mensaje.
+
+**Decimocuarta tarea — inflación mensual/interanual:**
+`inflacion.py` (nuevo, mismo patrón que `riesgo_pais.py`): `fetch_inflacion()` trae el último
+punto de las series mensual e interanual de argentinadatos.com, cada una no bloqueante por
+separado. **Bug encontrado en la fuente al validar con datos reales:** el endpoint documentado
+en el CLAUDE.md, `.../inflacion-interanual` (con guiones), devuelve 404 — el endpoint real es
+`.../inflacionInteranual` (camelCase), confirmado con `curl`. Corregido en el código antes de
+commitear. Sumada la línea `Inflación: 2.1% mensual / 45.3% interanual (dato de mayo 2026)` a
+"📊 Índices" (helper `_fecha_mes_anio()` nuevo, con nombres de mes en español) y como dato duro
+más en el prompt de `macro_summary.py`. No se compara contra la tanda anterior (es un dato
+mensual, no diario), mismo criterio ya establecido para riesgo país.
+
+**Decimoquinta tarea — acreditar las fuentes de noticias:**
+El pie del mensaje ahora tiene dos líneas separadas: `Datos: dolarapi.com, estadisticasbcra.com,
+argentinadatos.com.` y `Noticias: Ámbito, Infobae, El Cronista, La Nación, Bloomberg Línea.`. Las
+fuentes de noticias se toman de `rss_news.FEEDS.keys()` en `main.py` y se pasan como parámetro
+(`fuentes_noticias`) a `armar_mensaje()` — **no** se importa `rss_news` directamente desde
+`formatter.py`, porque `tests.py` depende explícitamente de que `formatter.py` no tenga
+dependencias externas (`feedparser`, en este caso) para poder correr sin instalar nada; importar
+`rss_news` ahí rompía esa garantía y tumbaba la suite de tests. Sólo aplica a los mensajes de
+datos (lección y efemérides no usan RSS, quedan sin este pie).
+
+**Decimosexta tarea — desfasar los cron:**
+Los 4 cron que caían en la hora/cuarto exacto (`0 11`, `0 14`, `0 15`, `0 22`) se corrieron unos
+minutos después (`3 11`, `4 14`, `7 15`, `2 22`), siguiendo el desfasaje exacto que ya había
+dejado especificado Cowork — para evitar la cola de carga de GitHub Actions en los minutos
+redondos. Los otros dos (`15 20`, `30 1`) ya estaban desfasados, sin cambios. **Importante:** el
+mapeo de `SCHEDULE` a `MOMENTO` en el `case` del workflow usa el string exacto del cron para
+identificar qué tanda es — se actualizó en el mismo commit que el `schedule`, si se desfasan sin
+actualizar el `case` el workflow cae al default (`pre_apertura`) en las 4 tandas movidas.
+
+**Housekeeping aparte (mismo día):** se commiteó documentación de sesiones de Cowork que estaba
+sólo en el working tree (tareas Duodécima a Decimonovena en `CLAUDE.md`) y el PDF de la auditoría
+general (Undécima tarea) que Cowork había dejado en la carpeta sin trackear.
+
 ## 2026-07-09 — Undécima tarea: auditoría general del sistema (esfuerzo máximo)
 
 Auditoría de punta a punta de todo lo construido (Primera a Décima tarea): los 15 módulos
