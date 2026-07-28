@@ -413,3 +413,24 @@ Sin opción gratuita sin key. La más accesible es OilPriceAPI, con key gratuita
 - **No aplican al reporte diario, sí a contenido ocasional:** World Bank, IMF.
 
 **No implementar nada todavía** — mismo criterio que la Decimoctava tarea, esto queda para que Capi decida qué priorizar antes de pasarlo a Code. Ninguna fuente nueva reemplaza nada de lo que ya funciona.
+
+## Vigésima tarea — sección "📈 Economía" + REM, Brasil y FRED (2026-07-22, decisión de Capi, para la próxima sesión con Code)
+
+Capi confirmó avanzar con las 3 fuentes de golpe (REM, Brasil, FRED) y separar ya la sección de economía, aunque arranque con un solo dato. Nada implementado todavía — esto es la especificación para Code, en el orden en que conviene construirlo (de menor a mayor fricción).
+
+**1. Crear la sección "📈 Economía" y mover la inflación ahí.**
+Hoy `Inflación: X% mensual / Y% interanual` vive dentro de "📊 Índices" (`formatter.py`), mezclada con MERVAL y riesgo país. Sacarla de ahí y crear una sección nueva "📈 Economía" que la contenga sola por ahora — el resto de esta tarea la va llenando. No cambia la lógica de `inflacion.py` ni el criterio de "no comparar contra la tanda anterior" (dato mensual, no diario) — es puramente reordenar dónde se imprime en `formatter.py`.
+
+**2. Sumar REM (BCRA, vía argentinadatos.com) — el más directo, mismo patrón que ya se usa.**
+`rem.py` nuevo, mismo patrón que `riesgo_pais.py`/`inflacion.py`: `fetch_rem()` contra `GET /v1/finanzas/rem/ultimo` (confirmar el shape real de la respuesta con `curl` antes de codear, mismo criterio que ya destapó el bug de `inflacionInteranual` en la Decimocuarta tarea — no asumir que la doc está 100% actualizada). Mostrar como dato prospectivo, distinguible del resto ("proyecta el mercado", no un valor medido) — ej. `Expectativa REM: inflación Xy% (próx. 12 meses)`. No bloqueante. Sumar también al prompt de `macro_summary.py` como dato de expectativas, no de resultado.
+
+**3. Sumar Brasil (Banco Central, PTAX + Selic) — gratis sin key, pero fuente/formato nuevos.**
+`brasil.py` nuevo: `fetch_ptax()` y `fetch_selic()` contra `dadosabertos.bcb.gov.br` (documentación Swagger en `olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/swagger-ui2`). A diferencia de REM, es una fuente sin experiencia previa en el repo — Code tiene que revisar el formato real de la respuesta primero (probablemente XML u OData, no JSON directo, a confirmar). Mostrar `Real (BRL/USD): X` y `Selic: Y%` en la sección Economía. No bloqueante, mismo criterio que todo lo demás.
+
+**4. FRED (Fed, EE.UU.) — el más valioso, pero bloqueado hasta que Capi saque la key.**
+**Paso 1, acción de Capi (no de Code):** sacar API key gratuita en `fredaccount.stlouisfed.org/apikeys` (alta inmediata, sin trámite largo — a diferencia de IOL) y cargarla como secret nuevo de GitHub Actions (`FRED_API_KEY`).
+**Paso 2, para Code, recién cuando la key esté cargada:** `fred.py` nuevo, `fetch_fed_rate()` contra la serie de la tasa de referencia de la Fed (serie `FEDFUNDS` o `DFEDTARU`, a confirmar cuál da el dato más directo) vía `GET https://api.stlouisfed.org/fred/series/observations?series_id=...&api_key=...&file_type=json`. Mostrar `Tasa Fed: X%` en Economía. Mismo criterio no bloqueante.
+
+**Orden de implementación sugerido para Code:** 1 (reordenar) → 2 (REM) → 3 (Brasil) → 4 (FRED, solo si Capi ya cargó la key; si no está lista, Code hace 1-3 y deja 4 documentada como bloqueada, mismo patrón que la Decimoséptima tarea con IOL).
+
+**No tocar en esta tarea:** commodities agro (Decimonovena, punto A) y Wall Street (punto B) siguen sin fuente gratuita confirmada — quedan afuera de esta ronda, no bloquean nada de lo de arriba.
