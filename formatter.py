@@ -208,6 +208,9 @@ def armar_mensaje(
     snapshot_inicio_dia: dict | None = None,
     inflacion: dict | None = None,
     fuentes_noticias: list[str] | None = None,
+    rem: dict | None = None,
+    brasil: dict | None = None,
+    fred: dict | None = None,
 ) -> str:
     referencia = _fecha_referencia(dolares)
     hoy = snapshot_anterior or {}
@@ -289,6 +292,12 @@ def armar_mensaje(
             f"Riesgo país: {riesgo_pais['valor']:.0f} pts "
             f"({riesgo_pais['variacion_pct']:+.1f}%){sufijo_rp}"
         )
+    if lineas_indices:
+        lineas += ["", "📊 <b>Índices</b>", *lineas_indices]
+
+    # Sección "Economía" (Vigésima tarea): datos duros de economía real, separados de mercado/
+    # cambiario — inflación, expectativas (REM) y el contexto regional (Brasil).
+    lineas_economia = []
     if inflacion is not None:
         # Dato mensual (INDEC vía argentinadatos.com, publicado con lag): no se compara contra
         # la tanda anterior como el resto de los campos, sólo se muestra el último valor conocido
@@ -304,9 +313,29 @@ def armar_mensaje(
             fecha_ref = (mensual or interanual)["fecha_origen"]
             mes_texto = _fecha_mes_anio(fecha_ref)
             etiqueta = f" (dato de {mes_texto})" if mes_texto else ""
-            lineas_indices.append(f"Inflación: {' / '.join(partes)}{etiqueta}")
-    if lineas_indices:
-        lineas += ["", "📊 <b>Índices</b>", *lineas_indices]
+            lineas_economia.append(f"Inflación: {' / '.join(partes)}{etiqueta}")
+    if rem is not None:
+        # Dato prospectivo (lo que espera el mercado, no un valor medido): se marca distinto del
+        # resto para no confundirlo con inflación ya ocurrida.
+        mes_encuesta = _fecha_mes_anio(rem.get("fecha_origen"))
+        etiqueta = f"; encuesta de {mes_encuesta}" if mes_encuesta else ""
+        lineas_economia.append(
+            f"Expectativa REM: inflación {rem['valor']:.1f}% i.a. (próx. 12 meses{etiqueta})"
+        )
+    if brasil is not None:
+        ptax = brasil.get("ptax")
+        selic = brasil.get("selic")
+        if ptax is not None:
+            sufijo_ptax = _sufijo_frescura(ptax.get("fecha_origen"), referencia)
+            lineas_economia.append(f"Real (BRL/USD): {ptax['valor']:.4f}{sufijo_ptax}")
+        if selic is not None:
+            sufijo_selic = _sufijo_frescura(selic.get("fecha_origen"), referencia)
+            lineas_economia.append(f"Selic (Brasil): {selic['valor']:.2f}%{sufijo_selic}")
+    if fred is not None:
+        sufijo_fred = _sufijo_frescura(fred.get("fecha_origen"), referencia)
+        lineas_economia.append(f"Tasa Fed (techo): {fred['valor']:.2f}%{sufijo_fred}")
+    if lineas_economia:
+        lineas += ["", "📈 <b>Economía</b>", *lineas_economia]
 
     if resumen_macro:
         lineas += [

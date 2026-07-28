@@ -10,6 +10,7 @@ Reporte diario de dólar, MERVAL y resumen macro con IA por Telegram. Contexto c
    - `TELEGRAM_CHAT_ID`: **Canal** de Telegram donde publica el bot (ver abajo)
    - `BCRA_API_TOKEN`: token gratuito de [estadisticasbcra.com/api](https://estadisticasbcra.com/api)
    - `ANTHROPIC_API_KEY`: API key de [console.anthropic.com](https://console.anthropic.com) para el resumen macro (Claude Haiku)
+   - `FRED_API_KEY` (opcional, no bloqueante): API key gratuita de [fredaccount.stlouisfed.org/apikeys](https://fredaccount.stlouisfed.org/apikeys), para la tasa de referencia de la Fed en la sección "Economía". Si falta, esa línea se omite y el resto del reporte sale igual.
 3. `python main.py`
 
 El resumen macro (RSS de Ámbito/Infobae/El Cronista + Claude API) es no bloqueante: si falla la conexión a un feed o a la API, el script sigue y manda el reporte de dólar + MERVAL sin esa sección.
@@ -28,6 +29,6 @@ El código de envío no cambia: `sendMessage` publica en el canal igual que en u
 
 ## GitHub Actions
 
-`.github/workflows/daily-report.yml` corre el script todos los días a las 8am (Argentina). Cargar los mismos cuatro valores como *secrets* del repo (Settings → Secrets and variables → Actions).
+`.github/workflows/daily-report.yml` corre el script todos los días a las 8am (Argentina). Cargar los mismos valores (incluido `FRED_API_KEY` si se quiere la tasa de la Fed) como *secrets* del repo (Settings → Secrets and variables → Actions).
 
 El workflow commitea `data/last_snapshot.json` después de cada corrida — se usa para calcular la variación día a día del dólar (dolarapi.com no expone histórico).

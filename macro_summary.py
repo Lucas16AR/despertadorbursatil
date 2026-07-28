@@ -40,6 +40,9 @@ def _armar_prompt(
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
     inflacion: dict | None = None,
+    rem: dict | None = None,
+    brasil: dict | None = None,
+    fred: dict | None = None,
 ) -> str:
     lineas = []
     if enfoque:
@@ -65,6 +68,20 @@ def _armar_prompt(
             partes.append(f"{interanual['valor']:.1f}% interanual")
         if partes:
             lineas.append(f"Inflación: {' / '.join(partes)}")
+    if rem is not None:
+        lineas.append(
+            f"Expectativa REM (mercado, no medido): inflación {rem['valor']:.1f}% i.a. a "
+            "próximos 12 meses"
+        )
+    if brasil is not None:
+        ptax = brasil.get("ptax")
+        selic = brasil.get("selic")
+        if ptax is not None:
+            lineas.append(f"Real brasileño (BRL/USD): {ptax['valor']:.4f}")
+        if selic is not None:
+            lineas.append(f"Selic (tasa de referencia de Brasil): {selic['valor']:.2f}%")
+    if fred is not None:
+        lineas.append(f"Tasa de referencia de la Fed (techo del rango objetivo): {fred['valor']:.2f}%")
 
     lineas.append("")
     grupos = agrupar_titulares(titulares)
@@ -92,13 +109,25 @@ def generar_resumen_macro(
     enfoque: str | None = None,
     riesgo_pais: dict | None = None,
     inflacion: dict | None = None,
+    rem: dict | None = None,
+    brasil: dict | None = None,
+    fred: dict | None = None,
 ) -> str | None:
     """Devuelve el resumen en bullets cortos (2-4 líneas), o None si falla la llamada a la API.
     `enfoque` es la instrucción del momento del día (pre-apertura, cierre, etc.) para
     que el resumen sea coherente con la tanda y no repita el mismo texto genérico."""
     client = anthropic.Anthropic()
     prompt = _armar_prompt(
-        titulares, dolares, merval, brecha_mep_oficial, enfoque, riesgo_pais, inflacion
+        titulares,
+        dolares,
+        merval,
+        brecha_mep_oficial,
+        enfoque,
+        riesgo_pais,
+        inflacion,
+        rem,
+        brasil,
+        fred,
     )
     try:
         response = client.messages.create(

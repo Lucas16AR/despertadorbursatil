@@ -1,5 +1,64 @@
 # PROGRESS.md
 
+## 2026-07-28 — Vigésima tarea: sección "📈 Economía" + REM, Brasil y FRED
+
+Las 4 partes de la Vigésima tarea, implementadas en orden (reordenar → REM → Brasil → FRED) y
+validadas una por una con fetch real contra cada fuente (sin fixtures, sin enviar nada a
+Telegram) antes de integrarlas al pipeline. 40 tests existentes siguen pasando sin cambios (no
+se tocó lógica cubierta por tests, sólo se sumaron datos nuevos al mensaje).
+
+**1. Sección "📈 Economía" nueva, separada de "📊 Índices".**
+`formatter.py`: la línea de inflación se sacó de "📊 Índices" (que ahora sólo tiene MERVAL y
+riesgo país) y se movió a una sección nueva "📈 Economía", que agrupa los datos duros de
+economía real no bursátiles. Sin cambios en `inflacion.py` ni en el criterio de no comparar
+contra la tanda anterior (dato mensual).
+
+**2. REM (expectativas de mercado, BCRA vía argentinadatos.com).**
+`rem.py` (nuevo, mismo patrón que `riesgo_pais.py`): `fetch_rem()` contra
+`GET /v1/finanzas/rem/ultimo`. El endpoint no devuelve un solo dato sino una lista plana de ~130
+indicadores distintos (desocupación, PBI, tipo de cambio, tasas...) — se filtra por
+`indicador == "Precios minoristas (IPC nivel general-Nacional; INDEC)"`,
+`periodoTipo == "proximos_12_meses"` y `muestra == "todos"` (no `top_10`, para tomar la mediana
+de todos los participantes de la encuesta). Se muestra como
+`Expectativa REM: inflación 22.3% i.a. (próx. 12 meses; encuesta de junio 2026)`, marcado
+explícitamente como expectativa (dato prospectivo) para no confundirlo con inflación medida.
+Sumado también al prompt de `macro_summary.py`.
+
+**3. Brasil — PTAX y Selic (Banco Central do Brasil).**
+`brasil.py` (nuevo): `fetch_ptax()` y `fetch_selic()`. **Cambio respecto de lo especulado en el
+CLAUDE.md:** la tarea original apuntaba a la API Olinda/OData de PTAX documentada en Swagger
+("probablemente XML u OData, a confirmar") — no hizo falta: existe una API mucho más simple, el
+SGS (`api.bcb.gov.br/dados/serie/bcdata.sgs.<serie>/dados/...`), que devuelve JSON plano sin
+key, mismo nivel de fricción que argentinadatos.com. Se usó esa. Series: `1` (PTAX venda,
+diaria) y `432` (meta Selic del Copom). **Detalle no obvio encontrado al validar con datos
+reales:** la serie 432 viene precargada con fechas *futuras* (el valor no cambia hasta la
+próxima reunión del Copom, así que el BCB ya tiene filas cargadas para los próximos días) —
+`_ultimo_no_futuro()` filtra esas filas para no mostrar una fecha del futuro como
+`fecha_origen`. Se muestran como `Real (BRL/USD): 5.1005` y `Selic (Brasil): 14.25%`, con la
+misma frescura relativa (`(al dd/mm)`) que el resto del mensaje.
+
+**4. FRED — tasa de la Fed (Federal Reserve Economic Data).**
+Capi ya había sacado la `FRED_API_KEY` y la cargó como secret de GitHub Actions antes de esta
+sesión, así que se implementó completo (no quedó bloqueada como IOL/MERVAL). `fred.py` (nuevo):
+`fetch_fed_rate()` contra `GET /fred/series/observations`. **Serie elegida: `DFEDTARU`**
+(Federal Funds Target Range - Upper Limit, diaria), no `FEDFUNDS` (la otra candidata que
+mencionaba el CLAUDE.md) — `FEDFUNDS` es un promedio mensual publicado con casi un mes de
+rezago, mientras que `DFEDTARU` refleja el valor vigente el mismo día. FRED marca días sin dato
+con el string literal `"."` (no lo documentaba el CLAUDE.md) — el código lo filtra explícitamente
+al buscar la primera observación numérica. Se muestra como `Tasa Fed (techo): 3.75%`. No
+bloqueante: si `FRED_API_KEY` no está seteada (ej. en un entorno local sin el secret),
+`fetch_fed_rate()` devuelve `None` sin error, mismo criterio que el resto de las fuentes nuevas.
+
+**Validación end-to-end:** corrida completa de `armar_mensaje()` con fetch real de las 6 fuentes
+(dólar, riesgo país, inflación, REM, Brasil, FRED) simultáneamente — mensaje completo revisado a
+mano, todas las líneas nuevas se ven correctas. De paso se confirmó en vivo que el criterio no
+bloqueante funciona de verdad: en una corrida, `fetch_ptax()` tiró timeout de red (fuente externa
+lenta en ese momento) y el mensaje se armó igual, sin esa única línea — al reintentar el fetch
+aislado funcionó normal, confirmando que fue un timeout transitorio y no un bug.
+
+**No tocado en esta tarea:** el resto del mensaje (dólar, MERVAL, disclaimer, panel), ni
+`inflacion.py` más allá de dónde se imprime su resultado.
+
 ## 2026-07-22 — Duodécima, Decimotercera, Decimocuarta, Decimoquinta y Decimosexta tarea
 
 Ronda de 5 tareas ya especificadas en sesiones anteriores de Cowork, todas validadas con datos

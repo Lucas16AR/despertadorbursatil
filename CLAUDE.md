@@ -414,6 +414,12 @@ Sin opción gratuita sin key. La más accesible es OilPriceAPI, con key gratuita
 
 **No implementar nada todavía** — mismo criterio que la Decimoctava tarea, esto queda para que Capi decida qué priorizar antes de pasarlo a Code. Ninguna fuente nueva reemplaza nada de lo que ya funciona.
 
+## Vigésima tarea — RESUELTA (2026-07-28, ver PROGRESS.md para el detalle completo)
+
+Las 4 partes implementadas y validadas con datos reales (sin fixtures): sección "📈 Economía" creada y la inflación movida ahí; `rem.py` nuevo (expectativa de inflación a 12 meses, filtrando el indicador correcto entre los ~130 que devuelve el endpoint); `brasil.py` nuevo (PTAX + Selic, vía el SGS del BCB — más simple que la API Olinda/OData que se había especulado); `fred.py` nuevo (tasa techo de la Fed, serie `DFEDTARU`) — Capi ya había cargado `FRED_API_KEY` antes de esta sesión, así que no quedó bloqueada como se esperaba. Detalle de cada endpoint y los hallazgos no obvios (fechas futuras en la serie de Selic, valores `"."` en FRED, indicador correcto del REM) en `PROGRESS.md`.
+
+Contexto original de la tarea (para referencia histórica):
+
 ## Vigésima tarea — sección "📈 Economía" + REM, Brasil y FRED (2026-07-22, decisión de Capi, para la próxima sesión con Code)
 
 Capi confirmó avanzar con las 3 fuentes de golpe (REM, Brasil, FRED) y separar ya la sección de economía, aunque arranque con un solo dato. Nada implementado todavía — esto es la especificación para Code, en el orden en que conviene construirlo (de menor a mayor fricción).
@@ -427,10 +433,10 @@ Hoy `Inflación: X% mensual / Y% interanual` vive dentro de "📊 Índices" (`fo
 **3. Sumar Brasil (Banco Central, PTAX + Selic) — gratis sin key, pero fuente/formato nuevos.**
 `brasil.py` nuevo: `fetch_ptax()` y `fetch_selic()` contra `dadosabertos.bcb.gov.br` (documentación Swagger en `olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/swagger-ui2`). A diferencia de REM, es una fuente sin experiencia previa en el repo — Code tiene que revisar el formato real de la respuesta primero (probablemente XML u OData, no JSON directo, a confirmar). Mostrar `Real (BRL/USD): X` y `Selic: Y%` en la sección Economía. No bloqueante, mismo criterio que todo lo demás.
 
-**4. FRED (Fed, EE.UU.) — el más valioso, pero bloqueado hasta que Capi saque la key.**
-**Paso 1, acción de Capi (no de Code):** sacar API key gratuita en `fredaccount.stlouisfed.org/apikeys` (alta inmediata, sin trámite largo — a diferencia de IOL) y cargarla como secret nuevo de GitHub Actions (`FRED_API_KEY`).
-**Paso 2, para Code, recién cuando la key esté cargada:** `fred.py` nuevo, `fetch_fed_rate()` contra la serie de la tasa de referencia de la Fed (serie `FEDFUNDS` o `DFEDTARU`, a confirmar cuál da el dato más directo) vía `GET https://api.stlouisfed.org/fred/series/observations?series_id=...&api_key=...&file_type=json`. Mostrar `Tasa Fed: X%` en Economía. Mismo criterio no bloqueante.
+**4. FRED (Fed, EE.UU.) — el más valioso. Ya desbloqueada.**
+**Paso 1 (acción de Capi) — CERRADO (2026-07-22):** Capi ya sacó la API key gratuita en `fredaccount.stlouisfed.org/apikeys` y la cargó como secret de GitHub Actions (`FRED_API_KEY`). Code no necesita esperar nada acá, puede ir directo al paso 2.
+**Paso 2, para Code:** `fred.py` nuevo, `fetch_fed_rate()` contra la serie de la tasa de referencia de la Fed (serie `FEDFUNDS` o `DFEDTARU`, a confirmar cuál da el dato más directo) vía `GET https://api.stlouisfed.org/fred/series/observations?series_id=...&api_key=...&file_type=json`. Mostrar `Tasa Fed: X%` en Economía. Mismo criterio no bloqueante.
 
-**Orden de implementación sugerido para Code:** 1 (reordenar) → 2 (REM) → 3 (Brasil) → 4 (FRED, solo si Capi ya cargó la key; si no está lista, Code hace 1-3 y deja 4 documentada como bloqueada, mismo patrón que la Decimoséptima tarea con IOL).
+**Orden de implementación para Code:** 1 (reordenar) → 2 (REM) → 3 (Brasil) → 4 (FRED) — las 4 partes de esta tarea están desbloqueadas, ninguna requiere acción manual pendiente de Capi.
 
 **No tocar en esta tarea:** commodities agro (Decimonovena, punto A) y Wall Street (punto B) siguen sin fuente gratuita confirmada — quedan afuera de esta ronda, no bloquean nada de lo de arriba.

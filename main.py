@@ -11,13 +11,16 @@ from dotenv import load_dotenv
 import snapshot
 import supabase_log
 from bcra import fetch_merval
+from brasil import fetch_ptax, fetch_selic
 from dolar import fetch_dolares
 from efemerides import generar_efemerides
 from formatter import ARG_TZ, armar_mensaje, calcular_brecha_mep_oficial, detectar_anomalias
+from fred import fetch_fed_rate
 from inflacion import fetch_inflacion
 from leccion_educativa import generar_leccion
 from macro_summary import generar_resumen_macro
 from momento import obtener_momento
+from rem import fetch_rem
 from riesgo_pais import fetch_riesgo_pais
 from rss_news import FEEDS, fetch_titulares
 from telegram_client import enviar_mensaje
@@ -85,6 +88,35 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
     except Exception as error:
         print(f"No se pudo obtener la inflación (no bloqueante): {error}")
 
+    # REM (expectativas de mercado, BCRA vía argentinadatos.com), no bloqueante.
+    rem = None
+    try:
+        rem = fetch_rem()
+    except Exception as error:
+        print(f"No se pudo obtener el REM (no bloqueante): {error}")
+
+    # Brasil (BCB — PTAX y Selic), no bloqueante: cada dato se resuelve por separado para que
+    # si uno de los dos falla, el otro igual se pueda mostrar.
+    brasil = {}
+    try:
+        brasil["ptax"] = fetch_ptax()
+    except Exception as error:
+        print(f"No se pudo obtener la PTAX de Brasil (no bloqueante): {error}")
+    try:
+        brasil["selic"] = fetch_selic()
+    except Exception as error:
+        print(f"No se pudo obtener la Selic de Brasil (no bloqueante): {error}")
+    if not brasil.get("ptax") and not brasil.get("selic"):
+        brasil = None
+
+    # Tasa de la Fed (FRED), no bloqueante — requiere FRED_API_KEY; si no está seteada,
+    # fetch_fed_rate() devuelve None sin error y el reporte sale igual sin esa línea.
+    fred = None
+    try:
+        fred = fetch_fed_rate()
+    except Exception as error:
+        print(f"No se pudo obtener la tasa de la Fed (no bloqueante): {error}")
+
     resumen_macro = None
     try:
         titulares = fetch_titulares()
@@ -96,6 +128,9 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
             enfoque=momento_cfg["enfoque_macro"],
             riesgo_pais=riesgo_pais,
             inflacion=inflacion,
+            rem=rem,
+            brasil=brasil,
+            fred=fred,
         )
     except Exception as error:
         print(f"No se pudo generar el resumen macro (no bloqueante): {error}")
@@ -110,6 +145,9 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
         snapshot_inicio_dia=snapshot_inicio_dia,
         inflacion=inflacion,
         fuentes_noticias=list(FEEDS.keys()),
+        rem=rem,
+        brasil=brasil,
+        fred=fred,
     )
     enviar_mensaje(mensaje)
 
@@ -123,6 +161,9 @@ def enviar_reporte_datos(momento_cfg: dict) -> None:
             "merval": merval,
             "riesgo_pais": riesgo_pais,
             "inflacion": inflacion,
+            "rem": rem,
+            "brasil": brasil,
+            "fred": fred,
             "brecha_mep_oficial": brecha_mep_oficial,
         },
         anomalias=detectar_anomalias(dolares, merval),
