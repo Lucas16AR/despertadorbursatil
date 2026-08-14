@@ -4,25 +4,25 @@
       "nombre": "Oficial",
       "compra": 1465,
       "venta": 1515,
-      "fecha_origen": "2026-08-13T17:00:00.000Z"
+      "fecha_origen": "2026-08-13T18:00:00.000Z"
     },
     "blue": {
       "nombre": "Blue",
       "compra": 1520,
       "venta": 1540,
-      "fecha_origen": "2026-08-13T19:57:00.000Z"
+      "fecha_origen": "2026-08-13T20:57:00.000Z"
     },
     "bolsa": {
       "nombre": "MEP",
       "compra": 1520.3,
       "venta": 1526.4,
-      "fecha_origen": "2026-08-13T19:57:00.000Z"
+      "fecha_origen": "2026-08-13T20:57:00.000Z"
     },
     "contadoconliqui": {
       "nombre": "CCL",
       "compra": 1579.5,
       "venta": 1581.4,
-      "fecha_origen": "2026-08-13T19:57:00.000Z"
+      "fecha_origen": "2026-08-13T20:57:00.000Z"
     },
     "mayorista": {
       "nombre": "Mayorista",
@@ -32,15 +32,15 @@
     },
     "cripto": {
       "nombre": "Cripto",
-      "compra": 1577.48,
+      "compra": 1577.63,
       "venta": 1580.7,
-      "fecha_origen": "2026-08-13T19:57:00.000Z"
+      "fecha_origen": "2026-08-13T20:57:00.000Z"
     },
     "tarjeta": {
       "nombre": "Tarjeta",
       "compra": 1904.5,
       "venta": 1969.5,
-      "fecha_origen": "2026-08-13T17:00:00.000Z"
+      "fecha_origen": "2026-08-13T18:00:00.000Z"
     }
   },
   "brecha_mep_oficial": 0.7524752475247585
