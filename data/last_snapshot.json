@@ -10,19 +10,19 @@
       "nombre": "Blue",
       "compra": 1540,
       "venta": 1560,
-      "fecha_origen": "2026-09-27T14:57:00.000Z"
+      "fecha_origen": "2026-09-27T17:57:00.000Z"
     },
     "bolsa": {
       "nombre": "MEP",
       "compra": 1544.3,
       "venta": 1557.3,
-      "fecha_origen": "2026-09-27T14:57:00.000Z"
+      "fecha_origen": "2026-09-27T17:57:00.000Z"
     },
     "contadoconliqui": {
       "nombre": "CCL",
       "compra": 1615.3,
       "venta": 1616.6,
-      "fecha_origen": "2026-09-27T14:57:00.000Z"
+      "fecha_origen": "2026-09-27T17:57:00.000Z"
     },
     "mayorista": {
       "nombre": "Mayorista",
@@ -32,9 +32,9 @@
     },
     "cripto": {
       "nombre": "Cripto",
-      "compra": 1608.41,
-      "venta": 1612.24,
-      "fecha_origen": "2026-09-27T14:57:00.000Z"
+      "compra": 1610.38,
+      "venta": 1612,
+      "fecha_origen": "2026-09-27T17:57:00.000Z"
     },
     "tarjeta": {
       "nombre": "Tarjeta",
