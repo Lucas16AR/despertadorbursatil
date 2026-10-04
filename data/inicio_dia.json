@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-10-03",
+  "fecha": "2026-10-04",
   "dolares": {
     "oficial": {
       "nombre": "Oficial",
@@ -11,19 +11,19 @@
       "nombre": "Blue",
       "compra": 1540,
       "venta": 1560,
-      "fecha_origen": "2026-10-03T11:56:00.000Z"
+      "fecha_origen": "2026-10-04T14:57:00.000Z"
     },
     "bolsa": {
       "nombre": "MEP",
       "compra": 1543.6,
       "venta": 1551.9,
-      "fecha_origen": "2026-10-03T11:56:00.000Z"
+      "fecha_origen": "2026-10-04T14:57:00.000Z"
     },
     "contadoconliqui": {
       "nombre": "CCL",
       "compra": 1621.1,
       "venta": 1623.8,
-      "fecha_origen": "2026-10-03T11:56:00.000Z"
+      "fecha_origen": "2026-10-04T14:57:00.000Z"
     },
     "mayorista": {
       "nombre": "Mayorista",
@@ -33,9 +33,9 @@
     },
     "cripto": {
       "nombre": "Cripto",
-      "compra": 1613.19,
-      "venta": 1617.37,
-      "fecha_origen": "2026-10-03T11:56:00.000Z"
+      "compra": 1611.51,
+      "venta": 1614.79,
+      "fecha_origen": "2026-10-04T14:57:00.000Z"
     },
     "tarjeta": {
       "nombre": "Tarjeta",
